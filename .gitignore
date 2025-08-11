@@ -1,0 +1,4 @@
+/traefik/certs
+/traefik/logs
+/local-files
+.env

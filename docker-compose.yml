@@ -53,22 +53,39 @@ services:
     networks:
       - red_solercia_com_co
 
+  postgres:
+    image: postgres:14.5
+    environment:
+      - POSTGRES_DB=solercia
+      - POSTGRES_USER=soler
+      - POSTGRES_PASSWORD=SO5!2025
+    ports:
+      - "5433:5432"
+    volumes:
+      - "postgres-data:/var/lib/postgresql/data"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U soler -d solercia"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - red_solercia_com_co
+
   flows:
     image: docker.n8n.io/n8nio/n8n
     restart: always
+    depends_on:
+      postgres:
+        condition: service_healthy
     labels:
       - traefik.enable=true
       - traefik.docker.network=red_solercia_com_co
-
       - traefik.http.routers.flows.rule=Host(`${SUBDOMAIN_FLOWS}.${DOMAIN_NAME}`)
       - traefik.http.routers.flows.entrypoints=websecure
       - traefik.http.routers.flows.tls=true
       - traefik.http.routers.flows.service=flows@docker
       - traefik.http.routers.flows.middlewares=flows@docker
-
       - traefik.http.services.flows.loadbalancer.server.port=5678
-
-      # headers (lowerCamelCase)
       - traefik.http.middlewares.flows.headers.stsSeconds=315360000
       - traefik.http.middlewares.flows.headers.browserXssFilter=true
       - traefik.http.middlewares.flows.headers.contentTypeNosniff=true
@@ -85,6 +102,13 @@ services:
       - WEBHOOK_URL=https://${SUBDOMAIN_FLOWS}.${DOMAIN_NAME}/
       - GENERIC_TIMEZONE=${GENERIC_TIMEZONE}
       - N8N_EDITOR_BASE_URL=https://${SUBDOMAIN_FLOWS}.${DOMAIN_NAME}/
+
+      - DB_TYPE=postgresdb
+      - DB_POSTGRESDB_HOST=postgres
+      - DB_POSTGRESDB_PORT=5432
+      - DB_POSTGRESDB_DATABASE=solercia
+      - DB_POSTGRESDB_USER=soler
+      - DB_POSTGRESDB_PASSWORD=SO5!2025
     volumes:
       - n8n_data:/home/node/.n8n
       - ./local-files:/files
@@ -115,6 +139,7 @@ services:
 volumes:
   n8n_data:
   traefik_data:
+  postgres-data:
 
 
 # Definición de redes

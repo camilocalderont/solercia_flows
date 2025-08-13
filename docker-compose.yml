@@ -1,50 +1,47 @@
 services:
   traefik:
-    image: traefik
-    container_name: traefik
+    image: traefik:v2.10.5
     restart: unless-stopped
     environment:
-      # ✅ TIMEZONE CONFIGURADO PARA BOGOTÁ
       TZ: ${GENERIC_TIMEZONE}
     command:
       - "--api.dashboard=true"
       - "--providers.docker=true"
       - "--providers.docker.exposedbydefault=false"
+      - "--providers.file.filename=/dynamic_conf.yml"
       - "--entrypoints.web.address=:80"
       - "--entrypoints.web.http.redirections.entryPoint.to=websecure"
       - "--entrypoints.web.http.redirections.entryPoint.scheme=https"
-      - "--entrypoints.web.http.redirections.entrypoint.permanent=true"
+      - "--entrypoints.web.http.redirections.entryPoint.permanent=true"
       - "--entrypoints.websecure.address=:443"
       - "--log.level=DEBUG"
       - "--log.filePath=/logs/traefik.log"
       - "--accesslog=true"
       - "--accesslog.filepath=/logs/access.log"
       - "--accesslog.bufferingsize=1000"
-      - "--providers.file.filename=/dynamic_conf.yml"
-      # ✅ TIMESTAMPS EN ZONA HORARIA LOCAL
       - "--log.format=json"
       - "--accesslog.format=json"
     labels:
       - "traefik.enable=true"
-      # Dashboard de Traefik
-      - "traefik.http.routers.dashboard.rule=Host(`traefik.solercia.com.co`)"
-      - "traefik.http.routers.dashboard.service=api@internal"
+
+      # Dashboard
+      - "traefik.http.routers.dashboard.rule=Host(`traefik.${DOMAIN_NAME}`)"
       - "traefik.http.routers.dashboard.entrypoints=websecure"
       - "traefik.http.routers.dashboard.tls=true"
+      - "traefik.http.routers.dashboard.service=api@internal"
       - "traefik.http.routers.dashboard.middlewares=authtraefik@docker"
       - "traefik.http.middlewares.authtraefik.basicauth.users=admin:$$apr1$$U21MlNDz$$UUIow5X8TF3qS5Bv5aypI1"
 
-      # Redirección de solercia.com.co a flows.solercia.com.co
-      - "traefik.http.middlewares.redirect-to-flows.redirectregex.regex=^https?://solercia\\.com\\.co/(.*)"
-      - "traefik.http.middlewares.redirect-to-flows.redirectregex.replacement=https://${SUBDOMAIN}.solercia.com.co/$${1}"
+      # Redirección dominio raíz -> flows
+      - "traefik.http.middlewares.redirect-to-flows.redirectregex.regex=^https?://[^/]+/(.*)"
+      - "traefik.http.middlewares.redirect-to-flows.redirectregex.replacement=https://${SUBDOMAIN_FLOWS}.${DOMAIN_NAME}/$${1}"
       - "traefik.http.middlewares.redirect-to-flows.redirectregex.permanent=true"
 
-      # Router para solercia.com.co que aplica la redirección
-      - "traefik.http.routers.redirect-root.rule=Host(`solercia.com.co`)"
-      - "traefik.http.routers.redirect-root.middlewares=redirect-to-flows"
+      - "traefik.http.routers.redirect-root.rule=Host(`${DOMAIN_NAME}`)"
       - "traefik.http.routers.redirect-root.entrypoints=websecure"
       - "traefik.http.routers.redirect-root.tls=true"
-      - "traefik.http.routers.redirect-root.service=flows"
+      - "traefik.http.routers.redirect-root.middlewares=redirect-to-flows"
+      - "traefik.http.routers.redirect-root.service=noop@internal"
     ports:
       - "80:80"
       - "443:443"
@@ -59,31 +56,26 @@ services:
   flows:
     image: docker.n8n.io/n8nio/n8n
     restart: always
-    container_name: flows
-    ports:
-      - "127.0.0.1:5678:5678"
     labels:
       - traefik.enable=true
+      - traefik.docker.network=red_solercia_com_co
 
-      #✅ CONFIGURACIÓN PRINCIPAL DEL ROUTER
       - traefik.http.routers.flows.rule=Host(`${SUBDOMAIN_FLOWS}.${DOMAIN_NAME}`)
       - traefik.http.routers.flows.entrypoints=websecure
       - traefik.http.routers.flows.tls=true
       - traefik.http.routers.flows.service=flows@docker
       - traefik.http.routers.flows.middlewares=flows@docker
 
-      # ✅ CONFIGURACIÓN DEL SERVICIO (PUERTO CORRECTO)
       - traefik.http.services.flows.loadbalancer.server.port=5678
 
-      # ✅ MIDDLEWARE DE SEGURIDAD
-      - traefik.http.middlewares.flows.headers.SSLRedirect=true
-      - traefik.http.middlewares.flows.headers.STSSeconds=315360000
-      - traefik.http.middlewares.flows.headers.browserXSSFilter=true
+      # headers (lowerCamelCase)
+      - traefik.http.middlewares.flows.headers.stsSeconds=315360000
+      - traefik.http.middlewares.flows.headers.browserXssFilter=true
       - traefik.http.middlewares.flows.headers.contentTypeNosniff=true
       - traefik.http.middlewares.flows.headers.forceSTSHeader=true
-      - traefik.http.middlewares.flows.headers.SSLHost=${DOMAIN_NAME}
-      - traefik.http.middlewares.flows.headers.STSIncludeSubdomains=true
-      - traefik.http.middlewares.flows.headers.STSPreload=true
+      - traefik.http.middlewares.flows.headers.sslHost=${DOMAIN_NAME}
+      - traefik.http.middlewares.flows.headers.stsIncludeSubdomains=true
+      - traefik.http.middlewares.flows.headers.stsPreload=true
 
     environment:
       - N8N_HOST=${SUBDOMAIN_FLOWS}.${DOMAIN_NAME}
@@ -92,6 +84,7 @@ services:
       - NODE_ENV=production
       - WEBHOOK_URL=https://${SUBDOMAIN_FLOWS}.${DOMAIN_NAME}/
       - GENERIC_TIMEZONE=${GENERIC_TIMEZONE}
+      - N8N_EDITOR_BASE_URL=https://${SUBDOMAIN_FLOWS}.${DOMAIN_NAME}/
     volumes:
       - n8n_data:/home/node/.n8n
       - ./local-files:/files
@@ -100,20 +93,20 @@ services:
 
 
   #incluir el website de solercia.com.co
-  web:
-    image: nginx
-    container_name: web
-    restart: always
-    ports:
-      - "80:80"
+  solercia-web:
+    image: nginx:1.27-alpine
+    container_name: solercia-web
+    restart: unless-stopped
     volumes:
-      - ./web:/usr/share/nginx/html
+      - ./solercia-web/dist/solercia-web/browser:/usr/share/nginx/html:ro
+      - ./solercia-web/nginx.conf:/etc/nginx/conf.d/default.conf:ro
     labels:
       - traefik.enable=true
+      - traefik.docker.network=red_solercia_com_co
       - traefik.http.routers.website.rule=Host(`${SUBDOMAIN_WEB}.${DOMAIN_NAME}`)
       - traefik.http.routers.website.entrypoints=websecure
+      - traefik.http.routers.website.service=website@docker  
       - traefik.http.routers.website.tls=true
-      - traefik.http.routers.website.service=website@docker
       - traefik.http.services.website.loadbalancer.server.port=80
     networks:
       - red_solercia_com_co

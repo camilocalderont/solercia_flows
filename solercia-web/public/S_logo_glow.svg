@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="50%" r="70%">
+      <stop offset="0%" stop-color="#3a0068"/>
+      <stop offset="70%" stop-color="#12081f"/>
+      <stop offset="100%" stop-color="#08050f"/>
+    </radialGradient>
+
+    <linearGradient id="ink" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#c08cff"/>
+      <stop offset="100%" stop-color="#6a30f5"/>
+    </linearGradient>
+
+    <!-- Outer glow filter -->
+    <filter id="outerGlow" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="10" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="100%" height="100%" fill="url(#bg)"/>
+
+  <!-- Glow layer (thick stroke, blurred) -->
+  <g transform="translate(256,300)" text-anchor="middle" dominant-baseline="middle">
+    <text x="0" y="0"
+          font-family="Georgia, 'Times New Roman', serif"
+          font-size="360"
+          font-weight="700"
+          fill="none"
+          stroke="#8a40ff"
+          stroke-width="30"
+          opacity="0.9"
+          filter="url(#outerGlow)">
+      S
+    </text>
+
+    <!-- Crisp letter on top -->
+    <text x="0" y="0"
+          font-family="Georgia, 'Times New Roman', serif"
+          font-size="360"
+          font-weight="700"
+          fill="url(#ink)"
+          stroke="#41138c"
+          stroke-opacity="0.45"
+          stroke-width="4">
+      S
+    </text>
+  </g>
+</svg>

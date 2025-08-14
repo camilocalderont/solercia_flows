@@ -74,9 +74,6 @@ services:
   flows:
     image: docker.n8n.io/n8nio/n8n
     restart: always
-    depends_on:
-      postgres:
-        condition: service_healthy
     labels:
       - traefik.enable=true
       - traefik.docker.network=red_solercia_com_co
@@ -112,6 +109,9 @@ services:
     volumes:
       - n8n_data:/home/node/.n8n
       - ./local-files:/files
+    depends_on:
+      postgres:
+        condition: service_healthy
     networks:
       - red_solercia_com_co
 
@@ -132,6 +132,50 @@ services:
       - traefik.http.routers.website.service=website@docker  
       - traefik.http.routers.website.tls=true
       - traefik.http.services.website.loadbalancer.server.port=80
+    networks:
+      - red_solercia_com_co
+
+  # Servicio Bolt AI
+  bolt:
+    image: bolt-ai:development
+    build:
+      context: ./bolt.diy
+      target: bolt-ai-development
+    container_name: bolt-ai
+    restart: unless-stopped
+    env_file: './bolt.diy/.env'
+    environment:
+      - NODE_ENV=development
+      - VITE_HMR_PROTOCOL=ws
+      - VITE_HMR_HOST=bolt.${DOMAIN_NAME}
+      - VITE_HMR_PORT=5173
+      - CHOKIDAR_USEPOLLING=true
+      - WATCHPACK_POLLING=true
+      - PORT=5173
+
+      - VITE_LOG_LEVEL=${VITE_LOG_LEVEL:-debug}
+      - DEFAULT_NUM_CTX=${DEFAULT_NUM_CTX:-32768}
+      - RUNNING_IN_DOCKER=true
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
+    volumes:
+      - './bolt.diy:/app'
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=red_solercia_com_co
+      - traefik.http.routers.bolt.rule=Host(`bolt.${DOMAIN_NAME}`)
+      - traefik.http.routers.bolt.entrypoints=websecure
+      - traefik.http.routers.bolt.tls=true
+      - traefik.http.routers.bolt.service=bolt@docker
+      - traefik.http.services.bolt.loadbalancer.server.port=5173
+      - traefik.http.middlewares.bolt.headers.stsSeconds=315360000
+      - traefik.http.middlewares.bolt.headers.browserXssFilter=true
+      - traefik.http.middlewares.bolt.headers.contentTypeNosniff=true
+      - traefik.http.middlewares.bolt.headers.forceSTSHeader=true
+      - traefik.http.middlewares.bolt.headers.sslHost=${DOMAIN_NAME}
+      - traefik.http.middlewares.bolt.headers.stsIncludeSubdomains=true
+      - traefik.http.middlewares.bolt.headers.stsPreload=true
+    command: pnpm run dev --host 0.0.0.0
     networks:
       - red_solercia_com_co
 

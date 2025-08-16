@@ -1,6 +1,6 @@
 services:
   traefik:
-    image: traefik:v2.10.5
+    image: traefik:v3.5.0
     restart: unless-stopped
     environment:
       TZ: ${GENERIC_TIMEZONE}
@@ -14,34 +14,22 @@ services:
       - "--entrypoints.web.http.redirections.entryPoint.scheme=https"
       - "--entrypoints.web.http.redirections.entryPoint.permanent=true"
       - "--entrypoints.websecure.address=:443"
-      - "--log.level=DEBUG"
+      - "--log.level=INFO"
       - "--log.filePath=/logs/traefik.log"
       - "--accesslog=true"
       - "--accesslog.filepath=/logs/access.log"
-      - "--accesslog.bufferingsize=1000"
-      - "--log.format=json"
-      - "--accesslog.format=json"
+      - "--certificatesresolvers.letsencrypt.acme.tlschallenge=true"
+      - "--certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL}"
+      - "--certificatesresolvers.letsencrypt.acme.storage=/certs/acme.json"
     labels:
       - "traefik.enable=true"
-
-      # Dashboard
       - "traefik.http.routers.dashboard.rule=Host(`traefik.${DOMAIN_NAME}`)"
       - "traefik.http.routers.dashboard.entrypoints=websecure"
       - "traefik.http.routers.dashboard.tls=true"
+      - "traefik.http.routers.dashboard.tls.certresolver=letsencrypt"
       - "traefik.http.routers.dashboard.service=api@internal"
-      - "traefik.http.routers.dashboard.middlewares=authtraefik@docker"
-      - "traefik.http.middlewares.authtraefik.basicauth.users=admin:$$apr1$$U21MlNDz$$UUIow5X8TF3qS5Bv5aypI1"
-
-      # Redirección dominio raíz -> flows
-      - "traefik.http.middlewares.redirect-to-flows.redirectregex.regex=^https?://[^/]+/(.*)"
-      - "traefik.http.middlewares.redirect-to-flows.redirectregex.replacement=https://${SUBDOMAIN_FLOWS}.${DOMAIN_NAME}/$${1}"
-      - "traefik.http.middlewares.redirect-to-flows.redirectregex.permanent=true"
-
-      - "traefik.http.routers.redirect-root.rule=Host(`${DOMAIN_NAME}`)"
-      - "traefik.http.routers.redirect-root.entrypoints=websecure"
-      - "traefik.http.routers.redirect-root.tls=true"
-      - "traefik.http.routers.redirect-root.middlewares=redirect-to-flows"
-      - "traefik.http.routers.redirect-root.service=noop@internal"
+      - "traefik.http.routers.dashboard.middlewares=authtraefik@docker,secure-headers@file"
+      - "traefik.http.middlewares.authtraefik.basicauth.users=admin:$$apr1$$SXbaYMPA$$lI1oM9OiEO.U5O.UmJ0GG1"
     ports:
       - "80:80"
       - "443:443"
@@ -49,7 +37,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./traefik/logs:/logs
       - ./traefik/dynamic_conf.yml:/dynamic_conf.yml:ro
-      - ./traefik/certs:/certs:ro
+      - ./traefik/certs:/certs
     networks:
       - red_solercia_com_co
 
@@ -127,25 +115,39 @@ services:
     labels:
       - traefik.enable=true
       - traefik.docker.network=red_solercia_com_co
-      - traefik.http.routers.website.rule=Host(`${SUBDOMAIN_WEB}.${DOMAIN_NAME}`)
+      
+      # Router para HTTPS
+      - traefik.http.routers.website.rule=Host(`www.solercia.com.co`)
       - traefik.http.routers.website.entrypoints=websecure
-      - traefik.http.routers.website.service=website@docker  
       - traefik.http.routers.website.tls=true
+      - traefik.http.routers.website.tls.certresolver=letsencrypt
+      - traefik.http.routers.website.middlewares=secure-headers@file
+      - traefik.http.routers.website.service=website@docker
+      
+      # Router para HTTP (redirección automática a HTTPS)
+      - traefik.http.routers.website-http.rule=Host(`www.solercia.com.co`)
+      - traefik.http.routers.website-http.entrypoints=web
+      
+      # Servicio
       - traefik.http.services.website.loadbalancer.server.port=80
     networks:
       - red_solercia_com_co
 
   # Servicio Bolt AI
   bolt:
-    image: bolt-ai:development
+    image: bolt-ai:production
     build:
       context: ./bolt.diy
-      target: bolt-ai-development
+      target: bolt-ai-production
+    deploy:
+      resources:
+        limits:
+          memory: 6G
     container_name: bolt-ai
     restart: unless-stopped
     env_file: './bolt.diy/.env'
     environment:
-      - NODE_ENV=development
+      - NODE_ENV=production
       - VITE_HMR_PROTOCOL=ws
       - VITE_HMR_HOST=bolt.${DOMAIN_NAME}
       - VITE_HMR_PORT=5173
@@ -161,10 +163,11 @@ services:
     volumes:
       - './bolt.diy:/app'
       - './bolt.diy/node_modules:/app/node_modules'
+      - './bolt.diy/build:/app/build'
     labels:
       - traefik.enable=true
       - traefik.docker.network=red_solercia_com_co
-      - traefik.http.routers.bolt.rule=Host(`bolt.${DOMAIN_NAME}`)
+      - traefik.http.routers.bolt.rule=Host(`${SUBDOMAIN_BOLT}.${DOMAIN_NAME}`)
       - traefik.http.routers.bolt.entrypoints=websecure
       - traefik.http.routers.bolt.tls=true
       - traefik.http.routers.bolt.service=bolt@docker
@@ -176,7 +179,7 @@ services:
       - traefik.http.middlewares.bolt.headers.sslHost=${DOMAIN_NAME}
       - traefik.http.middlewares.bolt.headers.stsIncludeSubdomains=true
       - traefik.http.middlewares.bolt.headers.stsPreload=true
-    command: pnpm run dev --host 0.0.0.0
+    command: pnpm run dockerstart
     networks:
       - red_solercia_com_co
 

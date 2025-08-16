@@ -44,7 +44,6 @@ Thumbs.db
 *.wmv
 
 # Ignore specific PANDORA directories
-bolt.diy/
 
 traefik/certs/
 traefik/logs/

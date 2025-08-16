@@ -54,3 +54,6 @@ traefik/logs/
 /traefik/logs
 /local-files
 .env
+/bolt.diy/node_modules
+/bolt.diy/build
+/bolt.diy/.env

@@ -160,6 +160,7 @@ services:
       - 'host.docker.internal:host-gateway'
     volumes:
       - './bolt.diy:/app'
+      - './bolt.diy/node_modules:/app/node_modules'
     labels:
       - traefik.enable=true
       - traefik.docker.network=red_solercia_com_co

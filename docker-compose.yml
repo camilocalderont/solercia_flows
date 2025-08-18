@@ -2,6 +2,7 @@ services:
   traefik:
     image: traefik:v3.5.0
     restart: unless-stopped
+    container_name: traefik
     environment:
       TZ: ${GENERIC_TIMEZONE}
     command:
@@ -14,19 +15,24 @@ services:
       - "--entrypoints.web.http.redirections.entryPoint.scheme=https"
       - "--entrypoints.web.http.redirections.entryPoint.permanent=true"
       - "--entrypoints.websecure.address=:443"
-      - "--log.level=INFO"
-      - "--log.filePath=/logs/traefik.log"
-      - "--accesslog=true"
-      - "--accesslog.filepath=/logs/access.log"
+      - "--entrypoints.websecure.http.tls.certresolver=letsencrypt"   # ⬅️ NUEVO: resolver por defecto
+
       - "--certificatesresolvers.letsencrypt.acme.tlschallenge=true"
       - "--certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL}"
       - "--certificatesresolvers.letsencrypt.acme.storage=/certs/acme.json"
+      # PREFETCH: pide 1 solo certificado SAN al arrancar (MAIN = www; SANS = flows, dev)
+      - "--entrypoints.websecure.http.tls.domains[0].main=${SUBDOMAIN_WEB}.${DOMAIN_NAME}"
+      - "--entrypoints.websecure.http.tls.domains[0].sans=${SUBDOMAIN_FLOWS}.${DOMAIN_NAME},${SUBDOMAIN_DEV}.${DOMAIN_NAME}"
+
+      - "--log.level=DEBUG"
+      - "--log.filePath=/logs/traefik.log"
+      - "--accesslog=true"
+      - "--accesslog.filepath=/logs/access.log"
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.dashboard.rule=Host(`traefik.${DOMAIN_NAME}`)"
       - "traefik.http.routers.dashboard.entrypoints=websecure"
       - "traefik.http.routers.dashboard.tls=true"
-      - "traefik.http.routers.dashboard.tls.certresolver=letsencrypt"
       - "traefik.http.routers.dashboard.service=api@internal"
       - "traefik.http.routers.dashboard.middlewares=authtraefik@docker,secure-headers@file"
       - "traefik.http.middlewares.authtraefik.basicauth.users=admin:$$apr1$$SXbaYMPA$$lI1oM9OiEO.U5O.UmJ0GG1"
@@ -43,6 +49,7 @@ services:
 
   postgres:
     image: postgres:14.5
+    container_name: postgres
     environment:
       - POSTGRES_DB=solercia
       - POSTGRES_USER=soler
@@ -61,6 +68,7 @@ services:
 
   flows:
     image: docker.n8n.io/n8nio/n8n
+    container_name: flows
     restart: always
     labels:
       - traefik.enable=true
@@ -68,6 +76,8 @@ services:
       - traefik.http.routers.flows.rule=Host(`${SUBDOMAIN_FLOWS}.${DOMAIN_NAME}`)
       - traefik.http.routers.flows.entrypoints=websecure
       - traefik.http.routers.flows.tls=true
+      - traefik.http.routers.flows.tls.certresolver=letsencrypt
+
       - traefik.http.routers.flows.service=flows@docker
       - traefik.http.routers.flows.middlewares=flows@docker
       - traefik.http.services.flows.loadbalancer.server.port=5678
@@ -78,7 +88,6 @@ services:
       - traefik.http.middlewares.flows.headers.sslHost=${DOMAIN_NAME}
       - traefik.http.middlewares.flows.headers.stsIncludeSubdomains=true
       - traefik.http.middlewares.flows.headers.stsPreload=true
-
     environment:
       - N8N_HOST=${SUBDOMAIN_FLOWS}.${DOMAIN_NAME}
       - N8N_PORT=5678
@@ -115,19 +124,19 @@ services:
     labels:
       - traefik.enable=true
       - traefik.docker.network=red_solercia_com_co
-      
+
       # Router para HTTPS
-      - traefik.http.routers.website.rule=Host(`www.solercia.com.co`)
+      - traefik.http.routers.website.rule=Host(`${SUBDOMAIN_WEB}.${DOMAIN_NAME}`)
       - traefik.http.routers.website.entrypoints=websecure
       - traefik.http.routers.website.tls=true
-      - traefik.http.routers.website.tls.certresolver=letsencrypt
       - traefik.http.routers.website.middlewares=secure-headers@file
       - traefik.http.routers.website.service=website@docker
-      
+      - traefik.http.routers.website.tls.certresolver=letsencrypt
+
       # Router para HTTP (redirección automática a HTTPS)
-      - traefik.http.routers.website-http.rule=Host(`www.solercia.com.co`)
+      - traefik.http.routers.website-http.rule=Host(`${SUBDOMAIN_WEB}.${DOMAIN_NAME}`)
       - traefik.http.routers.website-http.entrypoints=web
-      
+
       # Servicio
       - traefik.http.services.website.loadbalancer.server.port=80
     networks:
@@ -136,6 +145,7 @@ services:
   # Servicio Bolt AI
   bolt:
     image: bolt-ai:production
+    container_name: bolt
     build:
       context: ./bolt.diy
       target: bolt-ai-production
@@ -143,13 +153,12 @@ services:
       resources:
         limits:
           memory: 6G
-    container_name: bolt-ai
     restart: unless-stopped
     env_file: './bolt.diy/.env'
     environment:
       - NODE_ENV=production
       - VITE_HMR_PROTOCOL=ws
-      - VITE_HMR_HOST=bolt.${DOMAIN_NAME}
+      - VITE_HMR_HOST=${SUBDOMAIN_DEV}.${DOMAIN_NAME}
       - VITE_HMR_PORT=5173
       - CHOKIDAR_USEPOLLING=true
       - WATCHPACK_POLLING=true
@@ -167,9 +176,11 @@ services:
     labels:
       - traefik.enable=true
       - traefik.docker.network=red_solercia_com_co
-      - traefik.http.routers.bolt.rule=Host(`${SUBDOMAIN_BOLT}.${DOMAIN_NAME}`)
+      - traefik.http.routers.bolt.rule=Host(`${SUBDOMAIN_DEV}.${DOMAIN_NAME}`)
       - traefik.http.routers.bolt.entrypoints=websecure
       - traefik.http.routers.bolt.tls=true
+      - traefik.http.routers.bolt.tls.certresolver=letsencrypt
+
       - traefik.http.routers.bolt.service=bolt@docker
       - traefik.http.services.bolt.loadbalancer.server.port=5173
       - traefik.http.middlewares.bolt.headers.stsSeconds=315360000

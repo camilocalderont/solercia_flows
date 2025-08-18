@@ -54,6 +54,20 @@ traefik/logs/
 /traefik/logs
 /local-files
 .env
-/bolt.diy/node_modules
-/bolt.diy/build
+
+# PNPM
+/bolt.diy/.pnpm-store/
+pnpm-debug.log
+
+# Node/Docker comunes
+/bolt.diy/node_modules/
+/bolt.diy/build/
 /bolt.diy/.env
+/bolt.diy/.wrangler/
+/bolt.diy/.cache/
+/bolt.diy/.turbo/
+
+# macOS / IDE
+.DS_Store
+.vscode/
+.idea/

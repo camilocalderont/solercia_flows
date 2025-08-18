@@ -9,7 +9,6 @@ services:
       - "--api.dashboard=true"
       - "--providers.docker=true"
       - "--providers.docker.exposedbydefault=false"
-      - "--providers.file.filename=/dynamic_conf.yml"
       - "--entrypoints.web.address=:80"
       - "--entrypoints.web.http.redirections.entryPoint.to=websecure"
       - "--entrypoints.web.http.redirections.entryPoint.scheme=https"
@@ -28,21 +27,46 @@ services:
       - "--log.filePath=/logs/traefik.log"
       - "--accesslog=true"
       - "--accesslog.filepath=/logs/access.log"
+
+      - "--entrypoints.web.http.middlewares=secure-stack@docker"
+      - "--entrypoints.websecure.http.middlewares=secure-stack@docker"
     labels:
       - "traefik.enable=true"
+
+      # ---------- Middlewares definidos en el proveedor Docker ----------
+      # Seguridad (HSTS, XSS, NoSniff, frameDeny)
+      - "traefik.http.middlewares.secure-headers.headers.stsSeconds=31536000"
+      - "traefik.http.middlewares.secure-headers.headers.stsIncludeSubdomains=true"
+      - "traefik.http.middlewares.secure-headers.headers.stsPreload=true"
+      - "traefik.http.middlewares.secure-headers.headers.forceSTSHeader=true"
+      - "traefik.http.middlewares.secure-headers.headers.browserXssFilter=true"
+      - "traefik.http.middlewares.secure-headers.headers.contentTypeNosniff=true"
+      - "traefik.http.middlewares.secure-headers.headers.frameDeny=true"
+
+      # Compresión (si tu backend ya comprime, puedes omitirla)
+      - "traefik.http.middlewares.compress.compress=true"
+
+      # Rate limiting global (ajusta average/burst a tu tráfico)
+      - "traefik.http.middlewares.rate-limit.ratelimit.average=50"
+      - "traefik.http.middlewares.rate-limit.ratelimit.burst=100"
+
+      # Cadena global (se aplica en ambos entrypoints vía command)
+      - "traefik.http.middlewares.secure-stack.chain.middlewares=secure-headers,compress,rate-limit"
+
+      # ---------- Routers y servicios ----------
+      # Dashboard
       - "traefik.http.routers.dashboard.rule=Host(`traefik.${DOMAIN_NAME}`)"
       - "traefik.http.routers.dashboard.entrypoints=websecure"
       - "traefik.http.routers.dashboard.tls=true"
       - "traefik.http.routers.dashboard.service=api@internal"
-      - "traefik.http.routers.dashboard.middlewares=authtraefik@docker,secure-headers@file"
-      - "traefik.http.middlewares.authtraefik.basicauth.users=admin:$$apr1$$SXbaYMPA$$lI1oM9OiEO.U5O.UmJ0GG1"
+      - "traefik.http.routers.dashboard.middlewares=authtraefik@docker"
+      - "traefik.http.middlewares.authtraefik.basicauth.users=${TRAEFIK_BASIC_AUTH_USER}:${TRAEFIK_BASIC_AUTH_PASSWORD}"
     ports:
       - "80:80"
       - "443:443"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./traefik/logs:/logs
-      - ./traefik/dynamic_conf.yml:/dynamic_conf.yml:ro
       - ./traefik/certs:/certs
     networks:
       - red_solercia_com_co
@@ -79,15 +103,7 @@ services:
       - traefik.http.routers.flows.tls.certresolver=letsencrypt
 
       - traefik.http.routers.flows.service=flows@docker
-      - traefik.http.routers.flows.middlewares=flows@docker
       - traefik.http.services.flows.loadbalancer.server.port=5678
-      - traefik.http.middlewares.flows.headers.stsSeconds=315360000
-      - traefik.http.middlewares.flows.headers.browserXssFilter=true
-      - traefik.http.middlewares.flows.headers.contentTypeNosniff=true
-      - traefik.http.middlewares.flows.headers.forceSTSHeader=true
-      - traefik.http.middlewares.flows.headers.sslHost=${DOMAIN_NAME}
-      - traefik.http.middlewares.flows.headers.stsIncludeSubdomains=true
-      - traefik.http.middlewares.flows.headers.stsPreload=true
     environment:
       - N8N_HOST=${SUBDOMAIN_FLOWS}.${DOMAIN_NAME}
       - N8N_PORT=5678
@@ -106,6 +122,9 @@ services:
     volumes:
       - n8n_data:/home/node/.n8n
       - ./local-files:/files
+      # 🎨 PERSONALIZACIÓN SOLERCIA
+      - ./n8n-custom/custom-entrypoint.sh:/docker-entrypoint.d/99-solercia-branding.sh:ro
+      - ./n8n-custom/favicon.svg:/usr/local/lib/node_modules/n8n/dist/favicon.ico:ro
     depends_on:
       postgres:
         condition: service_healthy
@@ -125,13 +144,19 @@ services:
       - traefik.enable=true
       - traefik.docker.network=red_solercia_com_co
 
+      # Headers específicos para el website
+      - "traefik.http.middlewares.website-headers.headers.customrequestheaders.X-Forwarded-Proto=https"
+      - "traefik.http.middlewares.website-headers.headers.customresponseheaders.Content-Security-Policy=default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://threejs.org; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https:; object-src 'none'; media-src 'self'; frame-src 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests;"
+      - "traefik.http.middlewares.website-headers.headers.customresponseheaders.Referrer-Policy=strict-origin-when-cross-origin"
+      - "traefik.http.middlewares.website-headers.headers.customresponseheaders.Permissions-Policy=geolocation=(), microphone=(), camera=()"
+
       # Router para HTTPS
       - traefik.http.routers.website.rule=Host(`${SUBDOMAIN_WEB}.${DOMAIN_NAME}`)
       - traefik.http.routers.website.entrypoints=websecure
       - traefik.http.routers.website.tls=true
-      - traefik.http.routers.website.middlewares=secure-headers@file
       - traefik.http.routers.website.service=website@docker
       - traefik.http.routers.website.tls.certresolver=letsencrypt
+      - traefik.http.routers.website.middlewares=secure-stack@docker,website-headers@docker
 
       # Router para HTTP (redirección automática a HTTPS)
       - traefik.http.routers.website-http.rule=Host(`${SUBDOMAIN_WEB}.${DOMAIN_NAME}`)
@@ -183,13 +208,6 @@ services:
 
       - traefik.http.routers.bolt.service=bolt@docker
       - traefik.http.services.bolt.loadbalancer.server.port=5173
-      - traefik.http.middlewares.bolt.headers.stsSeconds=315360000
-      - traefik.http.middlewares.bolt.headers.browserXssFilter=true
-      - traefik.http.middlewares.bolt.headers.contentTypeNosniff=true
-      - traefik.http.middlewares.bolt.headers.forceSTSHeader=true
-      - traefik.http.middlewares.bolt.headers.sslHost=${DOMAIN_NAME}
-      - traefik.http.middlewares.bolt.headers.stsIncludeSubdomains=true
-      - traefik.http.middlewares.bolt.headers.stsPreload=true
     command: pnpm run dockerstart
     networks:
       - red_solercia_com_co

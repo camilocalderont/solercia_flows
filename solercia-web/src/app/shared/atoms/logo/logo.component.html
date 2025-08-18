@@ -1,0 +1,15 @@
+<div class="fixed inset-0 flex items-center justify-center z-10">
+    <div class="text-center">
+        <!-- Logo Image -->
+        <div class="flex justify-center">
+            <img src="logo_solercia.svg" alt="Solercia Logo"
+                class="w-80 h-80 md:w-[32rem] md:h-[32rem] lg:w-[40rem] lg:h-[40rem] object-contain logo-image" />
+        </div>
+
+        <!-- Rotating Text with Typewriter Effect -->
+        <p class="text-white font-sans text-xl md:text-2xl lg:text-3xl tracking-wide px-4 font-normal typewriter-text"
+            [style.width]="textWidth + '%'">
+            {{ currentPhrase }}
+        </p>
+    </div>
+</div>

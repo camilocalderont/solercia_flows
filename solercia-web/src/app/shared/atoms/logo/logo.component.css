@@ -1,0 +1,17 @@
+/* Estilos específicos del componente Logo */
+
+.typewriter-text {
+    color: white;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    overflow: hidden;
+    white-space: nowrap;
+    border-right: 3px solid white;
+    transition: width 0.1s ease;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .typewriter-text {
+        font-size: 1.125rem;
+    }
+}

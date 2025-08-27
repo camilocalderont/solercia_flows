@@ -1,0 +1,399 @@
+/* =============================================================================
+   🎨 SOLERCIA FLOWS - Tema Personalizado para N8N
+   ============================================================================= */
+
+:root {
+    /* Colores principales de Solercia (extraídos del logo SVG) */
+    --solercia-primary: #0cc2d5;
+    --solercia-secondary: #26dec3;
+    --solercia-accent: #45fdae;
+    --solercia-gradient: linear-gradient(135deg, #26dec3 0%, #0cc2d5 100%);
+    --solercia-gradient-reverse: linear-gradient(135deg, #0cc2d5 0%, #26dec3 100%);
+
+    /* Sobrescribir variables CSS de N8N */
+    --color-primary: #0cc2d5 !important;
+    --color-primary-tint-1: #33ddff !important;
+    --color-primary-tint-2: #66e6ff !important;
+    --color-primary-shade-1: #0aa8bb !important;
+    --color-secondary: #26dec3 !important;
+    --color-success: #26dec3 !important;
+    --color-warning: #45fdae !important;
+
+    /* Variables específicas de botones de N8N */
+    --color-button-primary-background: #0cc2d5 !important;
+    --color-button-primary-hover-background: #26dec3 !important;
+    --color-button-primary-active-background: #0aa8bb !important;
+    --color-button-primary-font: #ffffff !important;
+    --color-button-primary-border: #0cc2d5 !important;
+    --color-button-primary-hover-border: #26dec3 !important;
+    --color-button-primary-hover-active-border: #0aa8bb !important;
+}
+
+/* =============================================================================
+   BOTONES PRINCIPALES
+   ============================================================================= */
+
+/* Botones primarios con gradiente de Solercia */
+button[class*="button"][class*="primary"],
+.el-button--primary,
+.n8n-button--primary,
+.button--primary,
+[data-test-id*="save"],
+[data-test-id*="execute"],
+[data-test-id*="confirm"],
+[data-test-id*="create"],
+.el-button.el-button--primary {
+    background: var(--solercia-gradient) !important;
+    border: 1px solid transparent !important;
+    color: white !important;
+    font-weight: 600 !important;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    box-shadow: 0 4px 12px rgba(12, 194, 213, 0.3) !important;
+}
+
+button[class*="button"][class*="primary"]:hover,
+.el-button--primary:hover,
+.n8n-button--primary:hover,
+.button--primary:hover,
+.el-button.el-button--primary:hover {
+    background: var(--solercia-gradient-reverse) !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 6px 16px rgba(12, 194, 213, 0.4) !important;
+}
+
+button[class*="button"][class*="primary"]:active,
+.el-button--primary:active,
+.n8n-button--primary:active,
+.button--primary:active,
+.el-button.el-button--primary:active {
+    transform: translateY(0) !important;
+    box-shadow: 0 2px 8px rgba(12, 194, 213, 0.3) !important;
+}
+
+/* =============================================================================
+   ELEMENTOS INTERACTIVOS
+   ============================================================================= */
+
+/* Enlaces */
+a:not(.el-button):not(.n8n-button),
+.n8n-link,
+[class*="link"] {
+    color: var(--solercia-primary) !important;
+    transition: color 0.2s ease !important;
+}
+
+a:hover:not(.el-button):not(.n8n-button),
+.n8n-link:hover {
+    color: var(--solercia-secondary) !important;
+}
+
+/* Checkboxes */
+.el-checkbox__input.is-checked .el-checkbox__inner,
+input[type="checkbox"]:checked+label::before,
+.checkbox.is-checked .checkbox-inner {
+    background: var(--solercia-primary) !important;
+    border-color: var(--solercia-primary) !important;
+}
+
+/* Radio buttons */
+.el-radio__input.is-checked .el-radio__inner,
+.radio.is-checked .radio-inner {
+    background: var(--solercia-primary) !important;
+    border-color: var(--solercia-primary) !important;
+}
+
+.el-radio__input.is-checked .el-radio__inner::after {
+    background: white !important;
+}
+
+/* Switches/Toggles */
+.el-switch.is-checked .el-switch__core,
+.switch.is-checked .switch-core,
+.toggle.is-checked .toggle-core {
+    background: var(--solercia-primary) !important;
+}
+
+/* Progress bars */
+.el-progress-bar__inner,
+.progress-bar-inner,
+.progress-bar .progress-fill {
+    background: var(--solercia-gradient) !important;
+}
+
+/* =============================================================================
+   INPUTS Y FORMULARIOS
+   ============================================================================= */
+
+/* Focus en inputs */
+.el-input__inner:focus,
+.el-textarea__inner:focus,
+input:focus,
+textarea:focus,
+.input:focus,
+.textarea:focus {
+    border-color: var(--solercia-primary) !important;
+    box-shadow: 0 0 0 2px rgba(12, 194, 213, 0.2) !important;
+}
+
+/* Select dropdown */
+.el-select-dropdown__item.selected {
+    color: var(--solercia-primary) !important;
+    font-weight: 600 !important;
+}
+
+.el-select-dropdown__item:hover {
+    background-color: rgba(12, 194, 213, 0.1) !important;
+}
+
+/* =============================================================================
+   NAVEGACIÓN Y MENÚS
+   ============================================================================= */
+
+/* Elementos de menú activos */
+.el-menu-item.is-active,
+.menu-item.is-active,
+[class*="menu-item"][class*="active"],
+.sidebar-menu-item.active {
+    background: linear-gradient(90deg, rgba(38, 222, 195, 0.1) 0%, rgba(12, 194, 213, 0.1) 100%) !important;
+    border-right: 3px solid var(--solercia-primary) !important;
+    color: var(--solercia-primary) !important;
+}
+
+/* Tabs activos */
+.el-tabs__active-bar,
+.tabs-active-bar,
+.tab.active::after {
+    background: var(--solercia-gradient) !important;
+    height: 3px !important;
+}
+
+.el-tabs__item.is-active {
+    color: var(--solercia-primary) !important;
+    font-weight: 600 !important;
+}
+
+/* =============================================================================
+   WORKFLOW Y NODOS
+   ============================================================================= */
+
+/* Nodos seleccionados en el workflow */
+.node-default.node-box.node-box-selected,
+[class*="node"][class*="selected"],
+.workflow-node.selected {
+    border-color: var(--solercia-primary) !important;
+    box-shadow: 0 0 15px rgba(12, 194, 213, 0.4) !important;
+}
+
+/* Conexiones activas entre nodos */
+.connection.connection-selected,
+[class*="connection"][class*="selected"],
+.workflow-connection.selected {
+    stroke: var(--solercia-primary) !important;
+    stroke-width: 3px !important;
+}
+
+/* Botones de conexión de nodos */
+.node-connection-point:hover,
+.connection-point:hover {
+    background: var(--solercia-primary) !important;
+    box-shadow: 0 0 10px rgba(12, 194, 213, 0.5) !important;
+}
+
+/* =============================================================================
+   LOADING Y SPINNERS
+   ============================================================================= */
+
+.el-loading-spinner .circular,
+.el-loading-spinner .path,
+.loading-spinner .circular,
+.loading-spinner .path,
+.spinner {
+    stroke: var(--solercia-primary) !important;
+}
+
+/* Loading overlay */
+.el-loading-mask {
+    background-color: rgba(12, 194, 213, 0.1) !important;
+}
+
+/* =============================================================================
+   LOGO Y BRANDING
+   ============================================================================= */
+
+/* Reemplazar colores del logo de N8N con colores de Solercia */
+svg[class*="logo"] path[fill="#EA4B71"],
+svg[class*="logo"] path[fill="#ea4b71"],
+svg path[fill="#EA4B71"],
+svg path[fill="#ea4b71"] {
+    fill: var(--solercia-primary) !important;
+}
+
+/* Contenedor del logo */
+[class*="logo-container"],
+[class*="logoContainer"] {
+    position: relative;
+}
+
+/* Modificar texto del logo si es posible */
+[class*="logo-text"],
+[class*="logoText"] {
+    background: var(--solercia-gradient) !important;
+    background-clip: text !important;
+    -webkit-background-clip: text !important;
+    color: transparent !important;
+    font-weight: bold !important;
+}
+
+/* =============================================================================
+   NOTIFICACIONES Y ALERTAS
+   ============================================================================= */
+
+/* Notificaciones de éxito */
+.el-notification--success,
+.notification.success {
+    border-left-color: var(--solercia-secondary) !important;
+}
+
+.el-notification--success .el-notification__icon {
+    color: var(--solercia-secondary) !important;
+}
+
+/* Badges y etiquetas */
+.el-badge__content,
+.badge,
+.tag.primary {
+    background: var(--solercia-primary) !important;
+    color: white !important;
+}
+
+/* =============================================================================
+   SIDEBAR Y NAVEGACIÓN PRINCIPAL
+   ============================================================================= */
+
+/* Sidebar activo */
+.sidebar-item.active,
+.nav-item.active {
+    background: linear-gradient(90deg, rgba(38, 222, 195, 0.15) 0%, rgba(12, 194, 213, 0.15) 100%) !important;
+    border-right: 4px solid var(--solercia-primary) !important;
+}
+
+/* Hover en elementos de navegación */
+.sidebar-item:hover,
+.nav-item:hover {
+    background: rgba(12, 194, 213, 0.1) !important;
+}
+
+/* =============================================================================
+   RESPONSIVE Y TEMA OSCURO
+   ============================================================================= */
+
+/* Ajustes para tema oscuro */
+.theme-dark,
+[data-theme="dark"],
+body.dark {
+    --solercia-primary: #26dec3;
+    --solercia-secondary: #0cc2d5;
+}
+
+/* Ajustes para tema claro */
+.theme-light,
+[data-theme="light"],
+body.light {
+    --solercia-primary: #0aa8bb;
+    --solercia-secondary: #1fb8a8;
+}
+
+/* =============================================================================
+   ANIMACIONES Y TRANSICIONES
+   ============================================================================= */
+
+/* Animación suave para elementos interactivos */
+button,
+.button,
+a,
+.link,
+input,
+textarea,
+.input,
+.textarea {
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+/* Efecto de brillo en botones primarios */
+@keyframes solercia-glow {
+    0% {
+        box-shadow: 0 4px 12px rgba(12, 194, 213, 0.3);
+    }
+
+    50% {
+        box-shadow: 0 6px 20px rgba(12, 194, 213, 0.5);
+    }
+
+    100% {
+        box-shadow: 0 4px 12px rgba(12, 194, 213, 0.3);
+    }
+}
+
+button[class*="primary"]:focus {
+    animation: solercia-glow 2s infinite;
+}
+
+/* =============================================================================
+   SCROLLBARS PERSONALIZADOS
+   ============================================================================= */
+
+/* Scrollbars con colores de Solercia */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: rgba(12, 194, 213, 0.1);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--solercia-gradient);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--solercia-gradient-reverse);
+}
+
+/* =============================================================================
+   MARCA DE AGUA SOLERCIA (OPCIONAL)
+   ============================================================================= */
+
+/* Agregar marca sutil de Solercia */
+body::before {
+    content: "Powered by Solercia";
+    position: fixed;
+    bottom: 10px;
+    right: 10px;
+    font-size: 10px;
+    color: rgba(12, 194, 213, 0.3);
+    pointer-events: none;
+    z-index: 1000;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* =============================================================================
+   COMPATIBILIDAD Y FALLBACKS
+   ============================================================================= */
+
+/* Fallback para navegadores que no soportan CSS custom properties */
+@supports not (--css: variables) {
+    button[class*="primary"] {
+        background: #0cc2d5 !important;
+    }
+
+    .el-button--primary {
+        background: #0cc2d5 !important;
+    }
+
+    a {
+        color: #0cc2d5 !important;
+    }
+}

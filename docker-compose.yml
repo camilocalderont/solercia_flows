@@ -30,6 +30,10 @@ services:
 
       - "--entrypoints.web.http.middlewares=secure-stack@docker"
       - "--entrypoints.websecure.http.middlewares=secure-stack@docker"
+
+      # 🔌 Plugin para reescritura de body (permite inyectar CSS en HTML aunque llegue comprimido)
+      - "--experimental.plugins.rewrite-body.modulename=github.com/packruler/rewrite-body"
+      - "--experimental.plugins.rewrite-body.version=v1.2.0"
     labels:
       - "traefik.enable=true"
 
@@ -104,6 +108,21 @@ services:
 
       - traefik.http.routers.flows.service=flows@docker
       - traefik.http.services.flows.loadbalancer.server.port=5678
+      # 🧩 Middleware que inyecta el CSS (usa variables del .env de abajo)
+
+      # 👇 Inyección al FINAL del HTML para ganar la cascada
+      - traefik.http.middlewares.solercia-css.plugin.rewrite-body.allowedContentTypes[0]=text/html
+      - traefik.http.middlewares.solercia-css.plugin.rewrite-body.allowedContentTypes[1]=text/html; charset=utf-8
+      - traefik.http.middlewares.solercia-css.plugin.rewrite-body.rewrites[0].regex=</body>
+      - traefik.http.middlewares.solercia-css.plugin.rewrite-body.rewrites[0].replacement=<style id="solercia-theme">:root,.n8n-theme-light,.n8n-theme-dark{--solercia-primary:#00D4FF!important;--solercia-primary-dark:#00B8E6!important;--solercia-primary-light:#00E6FF!important;--solercia-secondary:#00FFA3!important;--color-primary-h:190!important;--color-primary-s:100%!important;--color-primary-l:50%!important;--prim-color-primary:var(--solercia-primary)!important;--button-background-color:var(--solercia-primary)!important;--button-font-color:#ffffff!important;--button-active-background-color:var(--solercia-primary-light)!important;--color-button-primary-background:var(--solercia-primary)!important;--color-button-primary-border:var(--solercia-primary-dark)!important;--color-button-primary-font:#ffffff!important;--color-button-primary-hover-active-border:var(--solercia-primary-light)!important;--el-color-primary:var(--solercia-primary)!important;--el-color-primary-dark-2:#00a8cc!important;--el-color-primary-light-3:#33ddff!important;}button[data-test-id="form-submit-button"]{background:var(--color-button-primary-background)!important;color:var(--color-button-primary-font)!important;border-color:var(--color-button-primary-border)!important;}[data-test-id="n8n-logo"] svg{display:none!important;}[data-test-id="n8n-logo"]::before{content:"";display:block;width:180px;height:34px;background:url('/favicon.svg') no-repeat left center/contain;}</style></body>
+
+      # 👇 Opcional: que el favicon sea SVG (tu .ico no es válido)
+      - traefik.http.middlewares.solercia-favicon.plugin.rewrite-body.allowedContentTypes[0]=text/html
+      - traefik.http.middlewares.solercia-favicon.plugin.rewrite-body.rewrites[0].regex=href="/favicon\.ico"
+      - traefik.http.middlewares.solercia-favicon.plugin.rewrite-body.rewrites[0].replacement=href="/favicon.svg" type="image/svg+xml"
+
+      # Aplica los middlewares en orden (primero headers/compresión, luego reescrituras)
+      - traefik.http.routers.flows.middlewares=secure-stack@docker,solercia-css@docker,solercia-favicon@docker
     environment:
       - N8N_HOST=${SUBDOMAIN_FLOWS}.${DOMAIN_NAME}
       - N8N_PORT=5678
@@ -123,8 +142,8 @@ services:
       - n8n_data:/home/node/.n8n
       - ./local-files:/files
       # 🎨 PERSONALIZACIÓN SOLERCIA
-      - ./n8n-custom/custom-entrypoint.sh:/docker-entrypoint.d/99-solercia-branding.sh:ro
       - ./n8n-custom/favicon.svg:/usr/local/lib/node_modules/n8n/dist/favicon.ico:ro
+      - ./n8n-custom/favicon.svg:/usr/local/lib/node_modules/n8n/dist/favicon.svg:ro
     depends_on:
       postgres:
         condition: service_healthy

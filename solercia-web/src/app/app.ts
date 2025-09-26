@@ -1,16 +1,10 @@
 import { Component } from '@angular/core';
-import { ParticlesBackgroundComponent } from './shared/atoms/particles-background/particles-background.component';
-import { LogoComponent } from './shared/atoms/logo/logo.component';
-import { MouseEffectComponent } from './shared/atoms/mouse-effect/mouse-effect.component';
+import { RouterOutlet } from '@angular/router';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [
-    ParticlesBackgroundComponent,
-    LogoComponent,
-    MouseEffectComponent
-  ],
+  imports: [RouterOutlet],
   templateUrl: './app.html',
   styleUrl: './app.css'
 })

@@ -1,16 +1,15 @@
 import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
-import { NgClass } from '@angular/common';
 
 @Component({
   selector: 'app-logo',
   standalone: true,
-  imports: [NgClass],
+  imports: [],
   templateUrl: './logo.component.html',
   styleUrls: ['./logo.component.css']
 })
 export class LogoComponent implements OnInit, OnDestroy {
   phrases = [
-    // Nuevas frases específicas de Solercia
+    // Frases originales de Solercia
     "Transformando empresas con Inteligencia Artificial",
     "Desarrollando el futuro del software empresarial",
     "Boki AI: Tu asistente inteligente está en camino",

@@ -1,0 +1,29 @@
+<footer [class]="'py-4 z-10 transition-all duration-300 ' +
+    (position === 'fixed' ? 'fixed bottom-0 left-0 right-0 ' : '') +
+    (variant === 'translucent'
+      ? 'bg-black bg-opacity-30 backdrop-blur-md border-t border-solercia-primary/50'
+      : 'bg-black bg-opacity-50 backdrop-blur-md')">
+    <div class="container mx-auto px-4 text-center text-white">
+        <p class="text-sm mb-2">
+            © 2025 <strong>SOLERCIA SOLUTIONS SAS</strong> - NIT: 901979003-2
+        </p>
+        <p class="text-xs mb-2">
+            Bogotá D.C., Colombia | Transformando el futuro con IA
+        </p>
+        <div class="text-xs space-x-4">
+            <a *ngIf="position === 'relative'" routerLink="/" class="hover:text-solercia-accent transition-colors">
+                Inicio
+            </a>
+            <a *ngIf="position === 'fixed'" routerLink="/politica-privacidad"
+                class="hover:text-solercia-accent transition-colors">
+                Política de Privacidad
+            </a>
+            <span>|</span>
+            <a href="mailto:accounts@solercia.com.co" class="hover:text-solercia-accent transition-colors">
+                Contacto
+            </a>
+            <span>|</span>
+            <span>+57 305 746 7347</span>
+        </div>
+    </div>
+</footer>

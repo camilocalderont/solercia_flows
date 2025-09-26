@@ -57,6 +57,11 @@ services:
       # Cadena global (se aplica en ambos entrypoints vía command)
       - "traefik.http.middlewares.secure-stack.chain.middlewares=secure-headers,compress,rate-limit"
 
+      # Middleware para redirección de dominio raíz a www
+      - "traefik.http.middlewares.redirect-to-www.redirectregex.regex=^https://${DOMAIN_NAME}/(.*)"
+      - "traefik.http.middlewares.redirect-to-www.redirectregex.replacement=https://${SUBDOMAIN_WEB}.${DOMAIN_NAME}/$${1}"
+      - "traefik.http.middlewares.redirect-to-www.redirectregex.permanent=true"
+
       # ---------- Routers y servicios ----------
       # Dashboard
       - "traefik.http.routers.dashboard.rule=Host(`traefik.${DOMAIN_NAME}`)"
@@ -79,15 +84,15 @@ services:
     image: postgres:14.5
     container_name: postgres
     environment:
-      - POSTGRES_DB=solercia
-      - POSTGRES_USER=soler
-      - POSTGRES_PASSWORD=SO5!2025
+      - POSTGRES_DB=${POSTGRES_SOLERCIA_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
     ports:
       - "5433:5432"
     volumes:
       - "postgres-data:/var/lib/postgresql/data"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U soler -d solercia"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_SOLERCIA_DB}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -180,6 +185,20 @@ services:
       # Router para HTTP (redirección automática a HTTPS)
       - traefik.http.routers.website-http.rule=Host(`${SUBDOMAIN_WEB}.${DOMAIN_NAME}`)
       - traefik.http.routers.website-http.entrypoints=web
+
+      # Router para redirección de dominio raíz (solercia.com.co -> www.solercia.com.co)
+      - traefik.http.routers.redirect-root-domain.rule=Host(`${DOMAIN_NAME}`)
+      - traefik.http.routers.redirect-root-domain.entrypoints=websecure
+      - traefik.http.routers.redirect-root-domain.tls=true
+      - traefik.http.routers.redirect-root-domain.tls.certresolver=letsencrypt
+      - traefik.http.routers.redirect-root-domain.middlewares=redirect-to-www@docker
+      - traefik.http.routers.redirect-root-domain.service=website@docker
+
+      # Router para HTTP del dominio raíz (también redirige)
+      - traefik.http.routers.redirect-root-domain-http.rule=Host(`${DOMAIN_NAME}`)
+      - traefik.http.routers.redirect-root-domain-http.entrypoints=web
+      - traefik.http.routers.redirect-root-domain-http.middlewares=redirect-to-www@docker
+      - traefik.http.routers.redirect-root-domain-http.service=website@docker
 
       # Servicio
       - traefik.http.services.website.loadbalancer.server.port=80

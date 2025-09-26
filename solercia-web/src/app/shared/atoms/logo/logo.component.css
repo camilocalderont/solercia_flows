@@ -2,16 +2,68 @@
 
 .typewriter-text {
     color: white;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-family: 'Saira', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     overflow: hidden;
-    white-space: nowrap;
     border-right: 3px solid white;
     transition: width 0.1s ease;
+    white-space: nowrap;
+}
+
+/* En móviles ajustar para mejor visualización */
+@media (max-width: 767px) {
+    .typewriter-text {
+        white-space: nowrap;
+        font-size: 0.85rem;
+        line-height: 1.4;
+        letter-spacing: 0.025em;
+    }
+}
+
+/* En resoluciones muy altas asegurar que el texto sea visible */
+@media (min-width: 1920px) {
+    .typewriter-text {
+        font-size: 1.5rem;
+        line-height: 1.4;
+    }
+}
+
+/* Efectos para el nombre de la empresa */
+h1 {
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+    animation: glow 2s ease-in-out infinite alternate;
+}
+
+@keyframes glow {
+    from {
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5), 0 0 10px rgba(59, 130, 246, 0.3);
+    }
+
+    to {
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5), 0 0 20px rgba(59, 130, 246, 0.6);
+    }
+}
+
+/* Efecto para el NIT y ubicación */
+.mb-4 p {
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.7);
+}
+
+/* Efecto para el logo - removido drop-shadow */
+.logo-image {
+    transition: transform 0.3s ease;
+}
+
+.logo-image:hover {
+    transform: scale(1.02);
 }
 
 /* Responsive adjustments */
 @media (max-width: 768px) {
     .typewriter-text {
         font-size: 1.125rem;
+    }
+
+    h1 {
+        font-size: 1.5rem;
     }
 }

@@ -5,7 +5,7 @@
    viewBox="0 0 1024 1024"
    version="1.1"
    id="svg5"
-   sodipodi:docname="solercia_from_png_borders.svg"
+   sodipodi:docname="logo_solercia.svg"
    inkscape:version="1.4 (e7c3feb1, 2024-10-09)"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
@@ -22,14 +22,14 @@
      inkscape:pagecheckerboard="1"
      inkscape:deskcolor="#505050"
      inkscape:zoom="0.48556164"
-     inkscape:cx="136.9548"
-     inkscape:cy="815.55041"
+     inkscape:cx="137.98454"
+     inkscape:cy="815.55042"
      inkscape:window-width="1920"
      inkscape:window-height="1027"
      inkscape:window-x="0"
      inkscape:window-y="25"
      inkscape:window-maximized="0"
-     inkscape:current-layer="svg5" />
+     inkscape:current-layer="wordmark-4" />
   <defs
      id="defs3">
     <marker
@@ -334,29 +334,31 @@
      filter="url(#glow)"
      transform="translate(21.068446,2.1104799)"
      style="filter:url(#glow-4)">
-    <text
-       x="512"
-       y="870"
-       font-family="Montserrat, Inter, Poppins, Arial, Helvetica, sans-serif"
-       font-size="80px"
-       font-weight="800"
-       letter-spacing="6"
-       fill="url(#grad)"
-       id="text4-9"
-       style="font-size:120px;opacity:1;fill:url(#linearGradient3)"><tspan
-         style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:120px;font-family:Saira;-inkscape-font-specification:'Saira Bold';fill:url(#linearGradient3)"
-         id="tspan10-1">SOLERCIA</tspan></text>
-    <text
-       x="514.78333"
-       y="933.56494"
-       font-family="Montserrat, Inter, Poppins, Arial, Helvetica, sans-serif"
-       font-size="36px"
-       font-weight="700"
-       letter-spacing="6"
-       fill="url(#grad)"
-       id="text5-5"
-       style="fill:url(#linearGradient4)"><tspan
-         style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-family:Archivo;-inkscape-font-specification:'Archivo Bold';fill:url(#linearGradient4)"
-         id="tspan2-5">AI &amp; SOFTWARE</tspan></text>
+      <text
+        id="text4-9"
+        x="512"
+        y="870"
+        style="
+          font-family:'Saira','Montserrat','Inter','Poppins',Arial,Helvetica,sans-serif;
+          font-weight:800;
+          font-size:120px;
+          letter-spacing:6;
+          fill:url(#linearGradient3)
+        ">
+        <tspan id="tspan10-1">SOLERCIA</tspan>
+      </text>
+      <text
+        id="text5-5"
+        x="514.78333"
+        y="933.56494"
+        style="
+          font-family:'Archivo','Montserrat','Inter','Poppins',Arial,Helvetica,sans-serif;
+          font-weight:700;
+          font-size:36px;
+          letter-spacing:6;
+          fill:url(#linearGradient4)
+        ">
+        <tspan id="tspan2-5">AI &amp; SOFTWARE</tspan>
+      </text>
   </g>
 </svg>

@@ -1,0 +1,71 @@
+/* Estilos específicos para la página de política de privacidad */
+
+/* Fuentes mejoradas */
+h1,
+h2,
+h3 {
+    font-family: 'Saira', sans-serif;
+    color: var(--solercia-accent);
+    /* Verde intermedio para todos los títulos */
+}
+
+p,
+li,
+div {
+    font-family: 'Archivo', sans-serif;
+}
+
+/* Animaciones suaves */
+.container {
+    animation: fadeIn 0.8s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Efectos de hover mejorados - removido el transform molesto */
+section {
+    /* Removido: transition: transform 0.2s ease; */
+}
+
+/* Mejorar legibilidad */
+h2 {
+    border-left: 4px solid #3b82f6;
+    padding-left: 1rem;
+}
+
+/* Enlaces con efecto */
+a {
+    transition: all 0.3s ease;
+}
+
+a:hover {
+    text-shadow: 0 0 8px rgba(59, 130, 246, 0.6);
+}
+
+/* Scrollbar personalizado */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.3);
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(59, 130, 246, 0.6);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(59, 130, 246, 0.8);
+}

@@ -1,0 +1,132 @@
+# ===========================================================
+# EJEMPLO CORRECTO: Definicion de servicio en docker-compose
+# ===========================================================
+# Este ejemplo muestra como definir un servicio backend
+# siguiendo las buenas practicas del proyecto Solercia/BokiBot.
+#
+# Principios aplicados:
+# - Variables de entorno desde .env (sin credenciales hardcodeadas)
+# - Healthcheck configurado
+# - Red compartida (sin puertos expuestos al host)
+# - Build multi-stage con target de produccion
+# - depends_on con condition: service_healthy
+# - restart: unless-stopped
+# - container_name explicito
+# - Labels de Traefik para ruteo HTTPS
+# ===========================================================
+
+services:
+  # ==========================================
+  # Ejemplo: Servicio API Backend
+  # ==========================================
+  mi-api:
+    build:
+      context: ./mi-api
+      dockerfile: Dockerfile
+      target: production               # Usa la etapa de produccion del Dockerfile multi-stage
+    container_name: mi-api
+    restart: unless-stopped
+
+    # Healthcheck: verifica que el servicio responde correctamente
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      start_period: 40s                # Tiempo de gracia para que la app inicie
+      retries: 3
+
+    # Variables de entorno: TODAS referenciadas desde .env
+    environment:
+      NODE_ENV: production
+      API_VERSION: ${API_VERSION:-1}    # Valor por defecto solo para config no sensible
+
+      # Base de datos - credenciales desde .env
+      POSTGRES_DB_HOST: postgres        # Nombre del servicio Docker (no localhost)
+      POSTGRES_DB_PORT: ${POSTGRES_DB_PORT}
+      POSTGRES_DB_USER: ${POSTGRES_DB_USER}
+      POSTGRES_DB_PASSWORD: ${POSTGRES_DB_PASSWORD}
+      POSTGRES_DB_NAME: ${POSTGRES_DB_NAME}
+
+      # MongoDB - URI construida con variables de .env
+      MONGO_URI: mongodb://${MONGO_USER}:${MONGO_PASSWORD}@mongo_db:27017/${MONGO_DB_NAME}?authSource=admin
+
+      # Autenticacion - secreto desde .env
+      JWT_SECRET: ${JWT_SECRET}
+
+      # Servicios externos - API keys desde .env
+      LLM_APIKEY: ${LLM_APIKEY}
+      LLM_MODEL: ${LLM_MODEL:-gpt-4o-mini}
+
+    # Dependencias: esperar a que la BD este saludable antes de iniciar
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mongo_db:
+        condition: service_healthy
+
+    # Red interna compartida (sin seccion 'ports:')
+    networks:
+      - red_solercia_com_co
+
+    # Volumenes: bind mounts para datos de la aplicacion
+    volumes:
+      - ./mi-api/uploads:/app/uploads
+      - ./mi-api/logs:/app/logs
+
+    # Labels de Traefik para ruteo HTTPS
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=red_solercia_com_co
+      - traefik.http.routers.mi-api.rule=Host(`${SUBDOMAIN_MI_API}.${DOMAIN_NAME}`)
+      - traefik.http.routers.mi-api.entrypoints=websecure
+      - traefik.http.routers.mi-api.tls=true
+      - traefik.http.routers.mi-api.tls.certresolver=letsencrypt
+      - traefik.http.routers.mi-api.service=mi-api@docker
+      - traefik.http.routers.mi-api.middlewares=secure-stack@docker
+      - traefik.http.services.mi-api.loadbalancer.server.port=3000
+
+  # ==========================================
+  # Ejemplo: Servicio de Base de Datos
+  # ==========================================
+  postgres:
+    image: postgres:14.5              # Version especifica, NUNCA 'latest'
+    container_name: postgres
+    restart: unless-stopped
+
+    environment:
+      - POSTGRES_DB=${POSTGRES_SOLERCIA_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+
+    # SIN seccion 'ports:' - solo accesible dentro de la red Docker
+    # Para desarrollo local temporal, descomentar:
+    # ports:
+    #   - "127.0.0.1:5433:5432"
+
+    # Volumen nombrado para persistencia de datos
+    volumes:
+      - "postgres-data:/var/lib/postgresql/data"
+
+    # Healthcheck para que otros servicios puedan depender de el
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_SOLERCIA_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+    networks:
+      - red_solercia_com_co
+
+# ==========================================
+# Volumenes nombrados para persistencia
+# ==========================================
+volumes:
+  postgres-data:
+
+# ==========================================
+# Red compartida entre todos los servicios
+# ==========================================
+networks:
+  red_solercia_com_co:
+    name: red_solercia_com_co
+    driver: bridge

@@ -1,0 +1,126 @@
+# ===========================================================
+# EJEMPLO CORRECTO: Labels de Traefik para un servicio
+# ===========================================================
+# Este ejemplo muestra como configurar las labels de Traefik
+# para exponer un servicio con HTTPS, middlewares de seguridad
+# y certificado SSL automatico via Let's Encrypt.
+#
+# Patron aplicado al proyecto Solercia/BokiBot.
+# ===========================================================
+
+services:
+  # ==========================================
+  # Servicio Web (Frontend con nginx)
+  # ==========================================
+  # Ejemplo completo con:
+  # - Router HTTPS principal
+  # - Redireccion HTTP a HTTPS
+  # - Redireccion de dominio raiz a www
+  # - Middlewares de seguridad personalizados
+  # - Cadena de middlewares (secure-stack)
+  # ==========================================
+  solercia-web:
+    image: nginx:1.27-alpine
+    container_name: solercia-web
+    restart: unless-stopped
+    volumes:
+      - ./solercia-web/dist/solercia-web/browser:/usr/share/nginx/html:ro
+      - ./solercia-web/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    labels:
+      # --- Activar Traefik para este servicio ---
+      - traefik.enable=true
+      - traefik.docker.network=red_solercia_com_co
+
+      # --- Middlewares personalizados del servicio ---
+      # Headers de seguridad adicionales especificos para el website
+      - "traefik.http.middlewares.website-headers.headers.customrequestheaders.X-Forwarded-Proto=https"
+      - "traefik.http.middlewares.website-headers.headers.customresponseheaders.Content-Security-Policy=default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https:; object-src 'none'"
+      - "traefik.http.middlewares.website-headers.headers.customresponseheaders.Referrer-Policy=strict-origin-when-cross-origin"
+      - "traefik.http.middlewares.website-headers.headers.customresponseheaders.Permissions-Policy=geolocation=(), microphone=(), camera=()"
+
+      # --- Router HTTPS (principal) ---
+      # Host: subdominio.dominio desde variables de entorno
+      - traefik.http.routers.website.rule=Host(`${SUBDOMAIN_WEB}.${DOMAIN_NAME}`)
+      - traefik.http.routers.website.entrypoints=websecure
+      - traefik.http.routers.website.tls=true
+      - traefik.http.routers.website.tls.certresolver=letsencrypt
+      - traefik.http.routers.website.service=website@docker
+      # Cadena de middlewares: seguridad global + headers especificos
+      - traefik.http.routers.website.middlewares=secure-stack@docker,website-headers@docker
+
+      # --- Router HTTP (redireccion automatica a HTTPS) ---
+      # Traefik redirige automaticamente gracias a la config del entrypoint
+      - traefik.http.routers.website-http.rule=Host(`${SUBDOMAIN_WEB}.${DOMAIN_NAME}`)
+      - traefik.http.routers.website-http.entrypoints=web
+
+      # --- Router para dominio raiz (solercia.com.co -> www.solercia.com.co) ---
+      - traefik.http.routers.redirect-root.rule=Host(`${DOMAIN_NAME}`)
+      - traefik.http.routers.redirect-root.entrypoints=websecure
+      - traefik.http.routers.redirect-root.tls=true
+      - traefik.http.routers.redirect-root.tls.certresolver=letsencrypt
+      - traefik.http.routers.redirect-root.middlewares=redirect-to-www@docker
+      - traefik.http.routers.redirect-root.service=website@docker
+
+      # --- Servicio: puerto interno del contenedor ---
+      - traefik.http.services.website.loadbalancer.server.port=80
+
+    networks:
+      - red_solercia_com_co
+
+  # ==========================================
+  # Servicio API Backend
+  # ==========================================
+  # Ejemplo minimo pero completo para un servicio API
+  # ==========================================
+  boki-api:
+    build:
+      context: ./boki-api
+      dockerfile: Dockerfile
+      target: production
+    container_name: boki-api
+    restart: unless-stopped
+    labels:
+      # --- Activar Traefik ---
+      - traefik.enable=true
+      - traefik.docker.network=red_solercia_com_co
+
+      # --- Router HTTPS ---
+      - traefik.http.routers.boki-api.rule=Host(`${SUBDOMAIN_BOKI_API}.${DOMAIN_NAME}`)
+      - traefik.http.routers.boki-api.entrypoints=websecure
+      - traefik.http.routers.boki-api.tls=true
+      - traefik.http.routers.boki-api.tls.certresolver=letsencrypt
+      - traefik.http.routers.boki-api.service=boki-api@docker
+      # Aplica la cadena de middlewares global (compress + rate-limit)
+      - traefik.http.routers.boki-api.middlewares=secure-stack@docker
+
+      # --- Servicio: puerto interno ---
+      - traefik.http.services.boki-api.loadbalancer.server.port=3000
+
+    networks:
+      - red_solercia_com_co
+
+  # ==========================================
+  # Referencia: Middlewares definidos en Traefik
+  # ==========================================
+  # Estos middlewares se definen como labels en el servicio 'traefik'
+  # y se referencian como NOMBRE@docker en los routers de los servicios.
+  #
+  # Middlewares disponibles:
+  #
+  # secure-headers@docker    - HSTS, XSS filter, nosniff, frameDeny
+  # n8n-headers@docker       - Como secure-headers pero X-Frame-Options: SAMEORIGIN
+  # compress@docker          - Compresion gzip/brotli
+  # rate-limit@docker        - 50 peticiones promedio, 100 burst
+  # secure-stack@docker      - Cadena: compress + rate-limit
+  # n8n-stack@docker         - Cadena: n8n-headers + compress + rate-limit
+  # redirect-to-www@docker   - Redirige dominio raiz a www
+  # authtraefik@docker       - Basic auth para el dashboard de Traefik
+  #
+  # Para agregar un nuevo middleware, definirlo como label en el
+  # servicio traefik y luego referenciarlo en el router del servicio.
+  # ==========================================
+
+networks:
+  red_solercia_com_co:
+    name: red_solercia_com_co
+    driver: bridge

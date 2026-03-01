@@ -1,0 +1,107 @@
+# ===========================================================
+# EJEMPLO INCORRECTO: Anti-patrones de Docker Compose
+# ===========================================================
+# Este archivo muestra MULTIPLES errores comunes que se deben
+# evitar al configurar servicios en Docker Compose.
+#
+# NUNCA usar este archivo como referencia para produccion.
+# Ver examples/correct/ para las buenas practicas.
+# ===========================================================
+
+services:
+  # ==========================================
+  # ERROR 1: Credenciales hardcodeadas
+  # ==========================================
+  # Las contrasenas y tokens estan directamente en el archivo.
+  # Si este archivo se sube a git, las credenciales quedan expuestas.
+  # ==========================================
+  postgres:
+    image: postgres                    # ERROR: Sin tag de version (usara 'latest')
+    environment:
+      # ERROR CRITICO: Credenciales en texto plano
+      - POSTGRES_DB=solercia_production
+      - POSTGRES_USER=admin
+      - POSTGRES_PASSWORD=SuperSecretPassword123!    # EXPUESTO en git
+    # ERROR: Puerto de BD expuesto al mundo
+    ports:
+      - "5432:5432"                    # Cualquiera en la red puede conectarse
+    # ERROR: Sin healthcheck
+    # ERROR: Sin politica de restart
+    # ERROR: Sin red definida (usa la red por defecto de Docker)
+
+  # ==========================================
+  # ERROR 2: API con multiples anti-patrones
+  # ==========================================
+  mi-api:
+    image: node:22                     # ERROR: Imagen base pesada sin optimizar
+    # ERROR: Sin container_name
+    # ERROR: Sin build multi-stage
+    working_dir: /app
+    command: npm start                 # ERROR: Sin dumb-init, manejo de senales incorrecto
+    environment:
+      NODE_ENV: production
+      # ERROR CRITICO: API keys y secretos hardcodeados
+      JWT_SECRET: mi-secreto-super-facil-de-adivinar
+      LLM_APIKEY: sk-1234567890abcdefghijklmnopqrstuvwxyz
+      API_TOKEN: token-de-produccion-123
+      META_BOT_TOKEN: EAAxxxxxxxxxxxxxxxxxxxxxxxx
+      META_VERIFY_TOKEN: mi-token-de-verificacion
+
+      # ERROR: Host de BD como IP hardcodeada en vez de nombre de servicio
+      POSTGRES_DB_HOST: 172.18.0.2
+      POSTGRES_DB_PASSWORD: SuperSecretPassword123!  # Duplicado del password de arriba
+
+      # ERROR: Contrasena de MongoDB tambien hardcodeada
+      MONGO_URI: mongodb://admin:MongoPassword456@mongo:27017/boki?authSource=admin
+    # ERROR: Puertos del API expuestos directamente
+    ports:
+      - "3000:3000"                    # No deberia ser accesible directamente
+    # ERROR: Sin healthcheck
+    # ERROR: Sin depends_on
+    # ERROR: Sin labels de Traefik (acceso directo por puerto, sin HTTPS)
+    volumes:
+      # ERROR: Montando todo el directorio del proyecto (incluye node_modules, .env, .git)
+      - .:/app
+      # ERROR: Docker socket con permisos de escritura
+      - /var/run/docker.sock:/var/run/docker.sock
+
+  # ==========================================
+  # ERROR 3: MongoDB mal configurado
+  # ==========================================
+  mongo:
+    image: mongo:latest                # ERROR: 'latest' no es reproducible
+    environment:
+      # ERROR CRITICO: Credenciales hardcodeadas
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: MongoPassword456
+    ports:
+      - "27017:27017"                  # ERROR: BD expuesta al exterior
+    # ERROR: Sin volumen nombrado (datos se pierden al recrear el contenedor)
+    # ERROR: Sin healthcheck
+    # ERROR: Sin restart policy
+
+# ERROR: Sin definicion de volumenes nombrados
+# ERROR: Sin definicion de red personalizada
+
+# ===========================================================
+# RESUMEN DE ERRORES EN ESTE ARCHIVO:
+# ===========================================================
+# 1. Credenciales hardcodeadas (passwords, API keys, tokens)
+# 2. Puertos de base de datos expuestos (5432, 27017)
+# 3. Puerto de API expuesto directamente (sin Traefik)
+# 4. Sin tags de version en imagenes (postgres, mongo:latest)
+# 5. Sin healthchecks en ningun servicio
+# 6. Sin politica de reinicio (restart)
+# 7. Sin red Docker personalizada
+# 8. Sin volumenes nombrados para persistencia
+# 9. Sin container_name explicito
+# 10. Sin build multi-stage (imagen pesada)
+# 11. Sin labels de Traefik (sin HTTPS, sin middlewares)
+# 12. Docker socket con permisos de escritura
+# 13. IP hardcodeada como host de BD
+# 14. Montaje completo del directorio del proyecto
+# 15. Sin dumb-init para manejo de senales
+# 16. Sin depends_on entre servicios dependientes
+#
+# CORRECCION: Ver examples/correct/service_definition.yml
+# ===========================================================

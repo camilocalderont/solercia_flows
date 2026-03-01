@@ -106,12 +106,49 @@ Un feature esta "done" cuando:
 5. Docker services levantan sin errores
 6. No hay credenciales expuestas
 
+## Skills Disponibles
+
+Todos los skills estan en `./skills/` con symlinks en `.claude/skills/`.
+
+### Skills del Proyecto (creados para BokiBot)
+
+| Skill | Descripcion | Trigger | Path |
+|-------|------------|---------|------|
+| `backend-nestjs` | NestJS 11: BaseCrudService, Guards, DTOs, Joi, naming | Crear/modificar modulos en boki-api | [SKILL.md](skills/backend-nestjs/SKILL.md) |
+| `frontend-angular` | Angular 20: standalone, signals, Tailwind, zoneless | Crear/modificar componentes en solercia-web o boki-front | [SKILL.md](skills/frontend-angular/SKILL.md) |
+| `n8n-workflows` | n8n: seguridad, env vars, SQL, sub-flujos, OpenAI | Crear/modificar flujos n8n | [SKILL.md](skills/n8n-workflows/SKILL.md) |
+| `devops-docker` | Docker, Traefik, SSL, networking, env management | Modificar docker-compose, Dockerfiles, Traefik | [SKILL.md](skills/devops-docker/SKILL.md) |
+| `qa-testing` | Smoke tests, Playwright, quality gates, validacion | Escribir tests, validar implementaciones | [SKILL.md](skills/qa-testing/SKILL.md) |
+| `security-audit` | OWASP, credenciales, SQL injection, headers, CORS | Auditar seguridad, gestionar credenciales | [SKILL.md](skills/security-audit/SKILL.md) |
+| `market-research` | Google Trends, GitHub, competidores, NPM | Investigacion de mercado | [SKILL.md](skills/market-research/SKILL.md) |
+
+### Skills Copiados de Gentleman-Skills
+
+| Skill | Descripcion | Path |
+|-------|------------|------|
+| `typescript` | TypeScript strict: const types, flat interfaces, utility types | [SKILL.md](skills/typescript/SKILL.md) |
+| `playwright` | Playwright E2E: Page Objects, selectores, MCP workflow | [SKILL.md](skills/playwright/SKILL.md) |
+
+### Skills SDD (Spec-Driven Development) de agent-teams-lite
+
+| Skill | Descripcion | Comando | Path |
+|-------|------------|---------|------|
+| `sdd-init` | Inicializar contexto SDD en el proyecto | `/sdd-init` | [SKILL.md](skills/sdd-init/SKILL.md) |
+| `sdd-explore` | Investigar codebase antes de proponer cambios | `/sdd-explore` | [SKILL.md](skills/sdd-explore/SKILL.md) |
+| `sdd-propose` | Crear propuesta de cambio | `/sdd-new <nombre>` | [SKILL.md](skills/sdd-propose/SKILL.md) |
+| `sdd-spec` | Escribir especificaciones del cambio | `/sdd-continue` | [SKILL.md](skills/sdd-spec/SKILL.md) |
+| `sdd-design` | Diseno tecnico detallado | `/sdd-continue` | [SKILL.md](skills/sdd-design/SKILL.md) |
+| `sdd-tasks` | Desglose de tareas | `/sdd-continue` | [SKILL.md](skills/sdd-tasks/SKILL.md) |
+| `sdd-apply` | Implementar codigo | `/sdd-apply` | [SKILL.md](skills/sdd-apply/SKILL.md) |
+| `sdd-verify` | Verificar implementacion | `/sdd-verify` | [SKILL.md](skills/sdd-verify/SKILL.md) |
+| `sdd-archive` | Archivar cambio completado | `/sdd-archive` | [SKILL.md](skills/sdd-archive/SKILL.md) |
+
 ## Archivos Clave
 
 | Archivo | Proposito |
 |---------|-----------|
 | `CLAUDE.md` | Guia tecnica del proyecto |
-| `AGENTS.md` | Roles de agentes y convenciones |
+| `AGENTS.md` | Roles de agentes, convenciones y skills |
 | `docker-compose.yml` | Orquestacion de servicios |
 | `.env` / `.env.example` | Variables de entorno |
 | `claude-logs/ESTADO.md` | Estado actual del proyecto |
@@ -129,15 +166,27 @@ solercia_flows/
 ├── boki-front/        # Angular admin frontend (repo independiente)
 ├── solercia-web/      # Angular website (parte del monorepo)
 ├── n8n-flujos/        # Workflows n8n en JSON
+│   └── v2/            # Flujos limpiados sin credenciales
 ├── traefik/           # Config Traefik (certs, logs)
-├── skills/            # Skills reutilizables
-│   └── market-research/
+├── skills/            # Skills reutilizables (18 skills)
+│   ├── backend-nestjs/    # NestJS patterns
+│   ├── frontend-angular/  # Angular 20 patterns
+│   ├── n8n-workflows/     # n8n flow patterns
+│   ├── devops-docker/     # Docker/Traefik patterns
+│   ├── qa-testing/        # Testing patterns
+│   ├── security-audit/    # Security review patterns
+│   ├── market-research/   # Market research scripts
+│   ├── typescript/        # TypeScript strict (Gentleman)
+│   ├── playwright/        # E2E testing (Gentleman)
+│   └── sdd-*/             # SDD skills (9 skills, agent-teams-lite)
+├── .claude/skills/    # Symlinks a ./skills/*
 ├── claude-analisis/   # Reportes de analisis
 ├── claude-logs/       # Logs de sesion autonoma
 ├── docs/              # Documentacion
 │   ├── market-research/
 │   ├── phases/
 │   └── c4/
+├── tests/             # Scripts de prueba
 ├── docker-compose.yml
 ├── CLAUDE.md
 ├── AGENTS.md

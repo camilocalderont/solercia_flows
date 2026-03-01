@@ -1,0 +1,127 @@
+{
+  "name": "Control-Tokens",
+  "nodes": [
+    {
+      "parameters": {
+        "resource": "execution",
+        "operation": "get",
+        "executionId": "={{$node[\"Webhook\"].json.body.executionId}}",
+        "options": {
+          "activeWorkflows": true
+        },
+        "requestOptions": {}
+      },
+      "type": "n8n-nodes-base.n8n",
+      "typeVersion": 1,
+      "position": [
+        -2560,
+        -1072
+      ],
+      "id": "2dbc7fda-052a-4448-997e-fdcc284be4e2",
+      "name": "Get an execution",
+      "credentials": {
+        "n8nApi": {
+          "id": "CVxnwUY8j0fjcYl8",
+          "name": "EstaSi"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "db792452-3964-4a6d-9249-4de5321372a0",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -2768,
+        -1072
+      ],
+      "id": "0187d02d-2430-4dc4-8ed5-2afcd0955610",
+      "name": "Webhook",
+      "webhookId": "db792452-3964-4a6d-9249-4de5321372a0"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO public.\"SessionControlTokens\" (\n  \"vc_session_id\",\n  \"executionId\",\n  \"tokensEntrada\",\n  \"tokensSalida\",\n  \"tokensTotal\"\n) VALUES (\n  '{{$node[\"Webhook\"].json.body.sessionId}}',\n  '{{$node[\"Webhook\"].json.body.executionId}}',\n  {{$node[\"Tokens\"].json.TotalTokensEntrada}},\n  {{$node[\"Tokens\"].json.TotalTokensSalida}},\n  {{$node[\"Tokens\"].json.TokensTotales}}\n)\nRETURNING *;\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -2176,
+        -1072
+      ],
+      "id": "122f20a7-c1a8-4339-813f-99130c6ad384",
+      "name": "Execute a SQL query",
+      "credentials": {
+        "postgres": {
+          "id": "Z2mTqwzFo4gFozil",
+          "name": "Boki"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Código para n8n v1.112.6 - Analizador de Tokens (Versión Limpia)\n\nconst executionData = $input.all()[0].json;\n\nlet totalTokensEntrada = 0;\nlet totalTokensSalida = 0;\n\n// Función auxiliar para buscar tokens recursivamente\nfunction buscarTokensRecursivo(obj) {\n  let entrada = 0;\n  let salida = 0;\n  \n  if (typeof obj !== 'object' || obj === null) {\n    return { entrada, salida };\n  }\n  \n  Object.keys(obj).forEach(key => {\n    const value = obj[key];\n    \n    // Buscar por nombres de propiedades específicas\n    if (typeof value === 'number') {\n      if (key.includes('promptTokens') || key.includes('prompt_tokens') || key.includes('inputTokens')) {\n        entrada += value;\n      } else if (key.includes('completionTokens') || key.includes('completion_tokens') || key.includes('outputTokens')) {\n        salida += value;\n      }\n    }\n    \n    // Recursión para objetos anidados\n    if (typeof value === 'object' && value !== null && !Array.isArray(value)) {\n      const recursiveResult = buscarTokensRecursivo(value);\n      entrada += recursiveResult.entrada;\n      salida += recursiveResult.salida;\n    }\n  });\n  \n  return { entrada, salida };\n}\n\ntry {\n  const runData = executionData.data?.resultData?.runData || {};\n  \n  // Recorrer todos los nodos ejecutados\n  Object.keys(runData).forEach(nodeName => {\n    const nodeExecutions = runData[nodeName];\n    \n    if (Array.isArray(nodeExecutions)) {\n      nodeExecutions.forEach(execution => {\n        \n        // Buscar en data.main\n        if (execution.data?.main) {\n          execution.data.main.forEach(outputArray => {\n            if (Array.isArray(outputArray)) {\n              outputArray.forEach(item => {\n                if (item.json) {\n                  \n                  // PATRÓN 1: tokenUsage directo\n                  if (item.json.tokenUsage) {\n                    const tokenUsage = item.json.tokenUsage;\n                    totalTokensEntrada += tokenUsage.promptTokens || 0;\n                    totalTokensSalida += tokenUsage.completionTokens || 0;\n                  }\n                  \n                  // PATRÓN 2: response.usage\n                  if (item.json.response?.usage) {\n                    const usage = item.json.response.usage;\n                    totalTokensEntrada += usage.prompt_tokens || 0;\n                    totalTokensSalida += usage.completion_tokens || 0;\n                  }\n                  \n                  // PATRÓN 3: llmOutput.tokenUsage\n                  if (item.json.llmOutput?.tokenUsage) {\n                    const tokenUsage = item.json.llmOutput.tokenUsage;\n                    totalTokensEntrada += tokenUsage.promptTokens || 0;\n                    totalTokensSalida += tokenUsage.completionTokens || 0;\n                  }\n                  \n                  // PATRÓN 4: metadata\n                  if (item.json.metadata?.tokenUsage) {\n                    const tokenUsage = item.json.metadata.tokenUsage;\n                    totalTokensEntrada += tokenUsage.promptTokens || tokenUsage.inputTokens || 0;\n                    totalTokensSalida += tokenUsage.completionTokens || tokenUsage.outputTokens || 0;\n                  }\n                  \n                  // PATRÓN 5: Buscar recursivamente\n                  const recursiveTokens = buscarTokensRecursivo(item.json);\n                  totalTokensEntrada += recursiveTokens.entrada;\n                  totalTokensSalida += recursiveTokens.salida;\n                }\n              });\n            }\n          });\n        }\n        \n        // Buscar en ai_languageModel\n        if (execution.data?.ai_languageModel) {\n          execution.data.ai_languageModel.forEach(outputArray => {\n            if (Array.isArray(outputArray)) {\n              outputArray.forEach(item => {\n                if (item.json?.tokenUsage) {\n                  const tokenUsage = item.json.tokenUsage;\n                  totalTokensEntrada += tokenUsage.promptTokens || 0;\n                  totalTokensSalida += tokenUsage.completionTokens || 0;\n                }\n              });\n            }\n          });\n        }\n      });\n    }\n  });\n  \n  // Resultado final\n  const tokensTotal = totalTokensEntrada + totalTokensSalida;\n  \n  return [{\n    json: {\n      \"TotalTokensEntrada\": totalTokensEntrada,\n      \"TotalTokensSalida\": totalTokensSalida,\n      \"TokensTotales\": tokensTotal\n    }\n  }];\n  \n} catch (error) {\n  return [{\n    json: {\n      \"TotalTokensEntrada\": 0,\n      \"TotalTokensSalida\": 0,\n      \"TokensTotales\": 0,\n      \"error\": error.message\n    }\n  }];\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2384,
+        -1072
+      ],
+      "id": "bc910ab6-4166-4801-b194-114089238adc",
+      "name": "Tokens"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Get an execution": {
+      "main": [
+        [
+          {
+            "node": "Tokens",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Get an execution",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tokens": {
+      "main": [
+        [
+          {
+            "node": "Execute a SQL query",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "fef56fa2-0ddb-4131-8c53-3e426964eb98",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "ff148f87cd53b8242e1fa88964c443b9837ba3a973eb946b9a0d19a356173028"
+  },
+  "id": "aSRNYQGPMetmOYvI",
+  "tags": []
+}

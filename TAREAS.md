@@ -16,7 +16,7 @@ Realiza un análisis de este proyecto que quiere ser un producto de chatbot para
   proyecto todos los skills que veas nos sirven teniendo en cuenta nuestro stack que se puedan copiar de
   https://github.com/Gentleman-Programming/Gentleman-Skills, pero ojito que quiero que estén en ./skills y tengan su par en .claude/skills pero
   como syslinks, al estilo de /Users/camilocalderont/Proyectos/IDARTES/pandora_proxy. Te pido que ajustes y me des una nueva version de los
-  sitios web con el chatbot, usa esta apikey de gemini para ese propósito: AIzaSyBHE6h1HAKciAEyvhTazu1Mnx_K0rre4tI. Por otro lado  quiero que revises la carpeta n8n-flujos y valides que encontraste bien y que se puede mejorar.
+  sitios web con el chatbot, usa la apikey de gemini del .env (GEMINI_API_KEY) para ese propósito. Por otro lado  quiero que revises la carpeta n8n-flujos y valides que encontraste bien y que se puede mejorar.
 
 # TAREAS
 0. De todo análisis deja un archivo markdown en una carpeta ./claude-analisis con el nombre como referencia y la fecha como prefijo.

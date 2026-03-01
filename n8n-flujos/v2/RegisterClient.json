@@ -1,0 +1,670 @@
+{
+  "name": "RegisterClient",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "6eeb66a5-1495-4b9c-971a-a3029da3d3e9",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -2128,
+        -128
+      ],
+      "id": "6133e8e6-e03c-4928-a0e3-e5baa379deb7",
+      "name": "Webhook",
+      "webhookId": "6eeb66a5-1495-4b9c-971a-a3029da3d3e9"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        -128,
+        -272
+      ],
+      "id": "861393d1-c351-4f60-b21a-e6ac3598fded",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "client-exists",
+              "leftValue": "={{$node[\"CheckClient\"].json.vc_phone ? true : false}}",
+              "rightValue": 0,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "47464230-538a-46e6-b971-99945c6425d2",
+      "name": "IF Client Exists",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -1664,
+        -128
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO \"Client\" (\n    vc_identification_number,\n    vc_phone,\n    vc_nick_name,\n    vc_first_name,\n    company_id\n) VALUES (\n    '',\n    '{{$node[\"DataClient\"].json.vc_phone}}',\n    '{{$node[\"DataClient\"].json.vc_nick}}',\n    '',\n    {{$node[\"DataClient\"].json.company_id}}\n) RETURNING *;",
+        "options": {}
+      },
+      "id": "b8645f7e-d9c6-4c0d-ab3d-cdc75f661ee9",
+      "name": "Insert New Client",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [
+        -1472,
+        112
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "Z2mTqwzFo4gFozil",
+          "name": "Boki"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "select \n\t*\nfrom \"Client\" c \nwhere c.vc_phone = '{{$node[\"DataClient\"].json.vc_phone}}'",
+        "options": {}
+      },
+      "id": "15ed1225-132f-4919-aaa7-0af1f3ebe16d",
+      "name": "CheckClient",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [
+        -1824,
+        -128
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "Z2mTqwzFo4gFozil",
+          "name": "Boki"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "select \n\t*\nfrom \"Session\" s \nwhere vc_session_id  = '{{$node[\"DataClient\"].json.sessionId}}'",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -1424,
+        -240
+      ],
+      "id": "affcb320-4891-409f-a12c-a2b29e25e010",
+      "name": "Session",
+      "credentials": {
+        "postgres": {
+          "id": "Z2mTqwzFo4gFozil",
+          "name": "Boki"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE \"Session\"\nSET \n  vc_step = 'waiting_identification',\n  dt_updated_at = NOW()\nWHERE vc_session_id = '{{$node[\"DataClient\"].json.sessionId}}';",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -1296,
+        112
+      ],
+      "id": "f454d1cb-51b9-45dc-87aa-6d32f22ee843",
+      "name": "UpdateSession",
+      "credentials": {
+        "postgres": {
+          "id": "Z2mTqwzFo4gFozil",
+          "name": "Boki"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.vc_step }}",
+                    "rightValue": "waiting_identification",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "d3a95ca1-98e4-4b90-a68c-149a1d613af1"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "vc_identification_number"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "27838c41-2931-415d-8ce3-c8e287e4fc9e",
+                    "leftValue": "={{ $json.vc_step }}",
+                    "rightValue": "waiting_name",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "vc_first_name"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.3,
+      "position": [
+        -1248,
+        -256
+      ],
+      "id": "313f21a4-3ec7-4ad1-b646-20a71e50c4ca",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE \"Client\"\nSET\n    vc_identification_number = '{{$node[\"DataClient\"].json.user_message}}',\n    updated_at = NOW()\nWHERE vc_phone = '{{$node[\"DataClient\"].json.vc_phone}}';\n\nUPDATE \"Session\"\nSET\n    vc_step = 'waiting_name',\n    dt_updated_at = NOW()\nWHERE vc_session_id = '{{$node[\"DataClient\"].json.sessionId}}';",
+        "options": {}
+      },
+      "id": "78f84b2c-2ba8-4614-b571-03fd5034c5af",
+      "name": "Update Cedula",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [
+        -784,
+        -800
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "Z2mTqwzFo4gFozil",
+          "name": "Boki"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "is-numeric",
+              "leftValue": "={{$node[\"DataClient\"].json.user_message}}",
+              "rightValue": "^[0-9]+$",
+              "operator": {
+                "type": "string",
+                "operation": "regex"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "f7fe56e4-43d1-4e46-9bcc-8ba67bdb8826",
+      "name": "Validate Cedula Input",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -992,
+        -640
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const phone = $('DataClient').item.json.vc_phone;\nconst message = `¡Hola! 👋 Bienvenido a BokiBot.\n\nPara brindarte un mejor servicio, necesito que me proporciones tu número de cédula sin letras ni puntos. EJ: 1234567890`;\n\nreturn {\n  json: {\n    messaging_product: \"whatsapp\",\n    to: phone,\n    type: \"text\",\n    text: {\n      body: message\n    }\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1072,
+        160
+      ],
+      "id": "18b6a089-d327-4f1d-94ef-8e00c8828690",
+      "name": "MessageCC"
+    },
+    {
+      "parameters": {
+        "jsCode": "const phone = $('DataClient').item.json.vc_phone;\nconst message = `Porfavor proporcione un numero de documento valido`;\n\nreturn {\n  json: {\n    messaging_product: \"whatsapp\",\n    to: phone,\n    type: \"text\",\n    text: {\n      body: message\n    }\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -768,
+        -560
+      ],
+      "id": "ed40536f-c758-4ea6-9afb-b04801842eaf",
+      "name": "MessageCC1"
+    },
+    {
+      "parameters": {
+        "jsCode": "const phone = $('DataClient').item.json.vc_phone;\nconst message = `Gracias por proporcionar tu cédula ✅\n\nAhora necesito que me indiques tu nombre completo para completar el registro.`;\n\nreturn {\n  json: {\n    messaging_product: \"whatsapp\",\n    to: phone,\n    type: \"text\",\n    text: {\n      body: message\n    }\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -592,
+        -800
+      ],
+      "id": "d93c1ef8-2393-4824-b98e-c3ea15f5b27d",
+      "name": "MessageName"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "is-numeric",
+              "leftValue": "={{$node[\"DataClient\"].json.user_message}}",
+              "rightValue": "^[a-zA-ZáéíóúÁÉÍÓÚñÑ\\s]+$",
+              "operator": {
+                "type": "string",
+                "operation": "regex"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "94fe753e-4b47-497d-b0b5-776235ab3a77",
+      "name": "Validate Cedula Input1",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -1040,
+        -160
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const phone = $('DataClient').item.json.vc_phone;\nconst message = `Porfavor proporcione un nombre valido`;\n\nreturn {\n  json: {\n    messaging_product: \"whatsapp\",\n    to: phone,\n    type: \"text\",\n    text: {\n      body: message\n    }\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -816,
+        -96
+      ],
+      "id": "ddc29868-7aa6-4931-96ce-344f2863e5e0",
+      "name": "MessageCC2"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE \"Client\"\nSET \n  vc_first_name = '{{$node[\"DataClient\"].json.user_message}}',\n  updated_at = NOW()\nWHERE vc_phone = '{{$node[\"DataClient\"].json.vc_phone}}';\n\nUPDATE \"Session\"\nSET \n  vc_step = 'register_complete',\n  dt_updated_at = NOW()\nWHERE vc_session_id = '{{$node[\"DataClient\"].json.sessionId}}';\n",
+        "options": {}
+      },
+      "id": "45c82370-6075-48d6-a9b8-73add6f49529",
+      "name": "Update Name",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [
+        -816,
+        -256
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "Z2mTqwzFo4gFozil",
+          "name": "Boki"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const phone = $('DataClient').item.json.vc_phone;\nconst message = `¡Registro completado exitosamente! ✅\n\n¿En qué puedo ayudarte hoy?`;\n\nreturn {\n  json: {\n    messaging_product: \"whatsapp\",\n    to: phone,\n    type: \"text\",\n    text: {\n      body: message\n    }\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -624,
+        -256
+      ],
+      "id": "32796c6d-3cfc-4053-aeab-92157d640fd2",
+      "name": "MessageRegisterComplete"
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "={\n  \"sessionId\": \"{{$node[\"Webhook\"].json.body.sessionId}}\",\n  \"vc_phone\" : \"{{$node[\"Webhook\"].json.body.vc_phone}}\",\n  \"vc_nick\": \"{{$node[\"Webhook\"].json.body.vc_nick}}\",\n  \"company_id\": {{$node[\"Webhook\"].json.body.company_id}},\n  \"user_message\": \"{{$node[\"Webhook\"].json.body.user_message}}\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1984,
+        -128
+      ],
+      "id": "5e394dd1-cdeb-4b51-822b-3054a13c02b2",
+      "name": "DataClient"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO \"MessageHistory\" (\n    vc_session_id,\n    vc_user_name,\n    vc_message\n) VALUES (\n    '{{$node[\"DataClient\"].json.sessionId}}',\n    'Sistem',\n    '{{ $json.text.body }}'\n) RETURNING *;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        64,
+        -272
+      ],
+      "id": "6937d636-4684-44c5-bbc7-eb1ad28e41c8",
+      "name": "InsertHistory",
+      "credentials": {
+        "postgres": {
+          "id": "Z2mTqwzFo4gFozil",
+          "name": "Boki"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "DataClient",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Client Exists": {
+      "main": [
+        [
+          {
+            "node": "Session",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Insert New Client",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert New Client": {
+      "main": [
+        [
+          {
+            "node": "UpdateSession",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CheckClient": {
+      "main": [
+        [
+          {
+            "node": "IF Client Exists",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Session": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "UpdateSession": {
+      "main": [
+        [
+          {
+            "node": "MessageCC",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Validate Cedula Input",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Validate Cedula Input1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Cedula": {
+      "main": [
+        [
+          {
+            "node": "MessageName",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Cedula Input": {
+      "main": [
+        [
+          {
+            "node": "Update Cedula",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "MessageCC1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Cedula Input1": {
+      "main": [
+        [
+          {
+            "node": "Update Name",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "MessageCC2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Name": {
+      "main": [
+        [
+          {
+            "node": "MessageRegisterComplete",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DataClient": {
+      "main": [
+        [
+          {
+            "node": "CheckClient",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MessageCC": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MessageCC2": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MessageRegisterComplete": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MessageCC1": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MessageName": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Respond to Webhook": {
+      "main": [
+        [
+          {
+            "node": "InsertHistory",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "019ca02c-7c04-49c6-83d9-5c8def408810",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "ff148f87cd53b8242e1fa88964c443b9837ba3a973eb946b9a0d19a356173028"
+  },
+  "id": "ItBkSjbn65NzHclh",
+  "tags": []
+}

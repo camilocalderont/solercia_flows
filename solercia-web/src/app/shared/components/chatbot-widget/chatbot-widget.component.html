@@ -1,0 +1,95 @@
+<!-- Floating Chat Button -->
+<button
+  (click)="toggleChat()"
+  class="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full bg-gradient-to-br from-solercia-accent to-emerald-600 text-white shadow-lg hover:shadow-xl hover:scale-110 transition-all duration-300 flex items-center justify-center"
+  [class.scale-0]="isOpen()"
+  aria-label="Abrir chat">
+  <svg xmlns="http://www.w3.org/2000/svg" class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+    <path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+  </svg>
+</button>
+
+<!-- Chat Window -->
+<div
+  class="fixed bottom-6 right-6 z-50 w-[380px] max-w-[calc(100vw-2rem)] h-[520px] max-h-[calc(100vh-4rem)] rounded-2xl shadow-2xl flex flex-col overflow-hidden transition-all duration-300 origin-bottom-right"
+  [class.scale-100]="isOpen()"
+  [class.scale-0]="!isOpen()"
+  [class.opacity-100]="isOpen()"
+  [class.opacity-0]="!isOpen()">
+
+  <!-- Header -->
+  <div class="bg-gradient-to-r from-solercia-accent to-emerald-600 px-4 py-3 flex items-center justify-between shrink-0">
+    <div class="flex items-center gap-3">
+      <div class="w-9 h-9 bg-white/20 rounded-full flex items-center justify-center">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0112 15a9.065 9.065 0 00-6.23.693L5 14.5m14.8.8l1.402 1.402c1.232 1.232.65 3.318-1.067 3.611A48.309 48.309 0 0112 21c-2.773 0-5.491-.235-8.135-.687-1.718-.293-2.3-2.379-1.067-3.61L5 14.5" />
+        </svg>
+      </div>
+      <div>
+        <h3 class="text-white font-semibold text-sm">BokiBot</h3>
+        <p class="text-white/70 text-xs">Asistente Virtual</p>
+      </div>
+    </div>
+    <button
+      (click)="toggleChat()"
+      class="text-white/80 hover:text-white transition-colors p-1"
+      aria-label="Cerrar chat">
+      <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+      </svg>
+    </button>
+  </div>
+
+  <!-- Messages -->
+  <div #messagesContainer class="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-900">
+    @for (msg of messages(); track msg.timestamp) {
+      <div [class]="msg.role === 'user' ? 'flex justify-end' : 'flex justify-start'">
+        <div [class]="msg.role === 'user'
+          ? 'bg-solercia-accent/20 text-white rounded-2xl rounded-br-md px-4 py-2 max-w-[80%]'
+          : 'bg-gray-800 text-gray-100 rounded-2xl rounded-bl-md px-4 py-2 max-w-[80%]'">
+          <p class="text-sm whitespace-pre-wrap">{{ msg.content }}</p>
+          <span class="text-xs text-gray-500 mt-1 block">
+            {{ msg.timestamp | date:'HH:mm' }}
+          </span>
+        </div>
+      </div>
+    }
+
+    <!-- Loading indicator -->
+    @if (isLoading()) {
+      <div class="flex justify-start">
+        <div class="bg-gray-800 text-gray-400 rounded-2xl rounded-bl-md px-4 py-3">
+          <div class="flex gap-1">
+            <span class="w-2 h-2 bg-solercia-accent rounded-full animate-bounce" style="animation-delay: 0ms"></span>
+            <span class="w-2 h-2 bg-solercia-accent rounded-full animate-bounce" style="animation-delay: 150ms"></span>
+            <span class="w-2 h-2 bg-solercia-accent rounded-full animate-bounce" style="animation-delay: 300ms"></span>
+          </div>
+        </div>
+      </div>
+    }
+  </div>
+
+  <!-- Input -->
+  <div class="bg-gray-800 border-t border-gray-700 px-3 py-3 shrink-0">
+    <div class="flex items-center gap-2">
+      <input
+        type="text"
+        [value]="userInput()"
+        (input)="userInput.set($any($event.target).value)"
+        (keydown)="onKeyDown($event)"
+        placeholder="Escribe tu mensaje..."
+        class="flex-1 bg-gray-700 text-white text-sm rounded-full px-4 py-2.5 border border-gray-600 focus:border-solercia-accent focus:ring-1 focus:ring-solercia-accent/50 outline-none placeholder-gray-400 transition-colors"
+        [disabled]="isLoading()" />
+      <button
+        (click)="sendMessage()"
+        [disabled]="isLoading() || !userInput().trim()"
+        class="w-10 h-10 bg-solercia-accent hover:bg-emerald-500 disabled:bg-gray-600 disabled:cursor-not-allowed rounded-full flex items-center justify-center text-white transition-colors shrink-0"
+        aria-label="Enviar mensaje">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
+        </svg>
+      </button>
+    </div>
+    <p class="text-center text-gray-500 text-[10px] mt-2">Powered by BokiBot &middot; Solercia Solutions</p>
+  </div>
+</div>

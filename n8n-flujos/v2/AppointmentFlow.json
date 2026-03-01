@@ -1,0 +1,462 @@
+{
+  "name": "AppointmentFlow",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "7e145415-70db-43da-8158-7ae12133f8c4",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -688,
+        -128
+      ],
+      "id": "c326a199-d31e-4772-98e9-84f44cbf5449",
+      "name": "Webhook",
+      "webhookId": "7e145415-70db-43da-8158-7ae12133f8c4"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{$node[\"Parcer-Appointment\"].json}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        2112,
+        -160
+      ],
+      "id": "51ee0b1f-fb43-4cb7-b6ae-eeed5457603c",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extraer datos del webhook usando sintaxis de nodo\nconst sessionId = $node[\"Webhook\"].json.body.sessionId || '';\nconst companyId = $node[\"Webhook\"].json.body.company_id || null;\nconst userMessage = $node[\"Webhook\"].json.body.user_message || '';\nconst step = $node[\"Webhook\"].json.body.vc_step || '';\n\n// Extraer datos del cliente\nconst client = $node[\"Webhook\"].json.body.client || {};\nconst clientId = client.Id || null;\nconst clientIdentification = client.vc_identification_number || '';\nconst clientPhone = client.vc_phone || '';\nconst clientNickName = client.vc_nick_name || '';\nconst clientFirstName = client.vc_first_name || '';\nconst clientEmail = client.vc_email || '';\n\n// Retornar la data organizada\nreturn {\n  sessionId: sessionId,\n  company_id: companyId,\n  user_message: userMessage,\n  step: step,\n  client: {\n    id: clientId,\n    identification_number: clientIdentification,\n    phone: clientPhone,\n    nick_name: clientNickName,\n    first_name: clientFirstName,\n    email: clientEmail\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -512,
+        -128
+      ],
+      "id": "ece234a8-3546-4bb1-82a0-0a2b5ac4fa4a",
+      "name": "DataSession"
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.API_URL }}/api/v1/professional/company/{{$node[\"DataSession\"].json.company_id}}/agent",
+        "sendHeaders": true,
+        "specifyHeaders": "json",
+        "jsonHeaders": "{\n  \"x-api-token\": \"{{ $env.API_TOKEN }}\",\n  \"x-api-key\": \"{{ $env.API_TOKEN }}\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -304,
+        -128
+      ],
+      "id": "90cc6c5c-78bd-4938-8b69-2e8848f309e9",
+      "name": "Professional-Context"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extraer la data de la respuesta HTTP\nconst response = $node[\"Professional-Context\"].json;\nconst professionals = response.data || [];\n\n// Función para formatear los horarios de manera legible\nfunction formatSchedule(horarios) {\n  return horarios.map(h => {\n    let schedule = `${h.dia}: ${h.horaInicio} - ${h.horaFin}`;\n    if (h.break) {\n      schedule += ` (Break: ${h.break.inicio} - ${h.break.fin})`;\n    }\n    return schedule;\n  }).join('\\n    ');\n}\n\n// Función para formatear los servicios\nfunction formatServices(servicios) {\n  return servicios.map(s => `- ${s.service} (ID: ${s.service_id})`).join('\\n    ');\n}\n\n// Crear el contexto formateado para el LLM\nlet context = `INFORMACIÓN DE PROFESIONALES DISPONIBLES\\n`;\ncontext += `===========================================\\n\\n`;\ncontext += `Total de profesionales: ${professionals.length}\\n\\n`;\n\nprofessionals.forEach((prof, index) => {\n  context += `${index + 1}. ${prof.Nombre.toUpperCase()}\\n`;\n  context += `   ID Profesional: ${prof.Id}\\n`;\n  context += `   Profesión: ${prof.Profesion}\\n`;\n  context += `   Especialización: ${prof.Especializacion}\\n`;\n  context += `   Contacto: ${prof.Email} | ${prof.Telefono}\\n\\n`;\n  \n  context += `   SERVICIOS QUE OFRECE:\\n`;\n  context += `   ${formatServices(prof.Servicios)}\\n\\n`;\n  \n  context += `   HORARIOS DISPONIBLES:\\n`;\n  context += `   ${formatSchedule(prof.Horarios)}\\n`;\n  context += `\\n${'─'.repeat(80)}\\n\\n`;\n});\n\n// Retornar tanto el contexto formateado como la data original\nreturn {\n  formatted_context: context,\n  professionals_data: professionals,\n  total_professionals: professionals.length\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -96,
+        -128
+      ],
+      "id": "469904eb-d967-4093-b035-87b45320216f",
+      "name": "Professional-Data"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-5-nano",
+          "mode": "list",
+          "cachedResultName": "gpt-5-nano"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        -32,
+        128
+      ],
+      "id": "5fb06c23-94ec-4096-8ef4-a4d3969ec300",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "7yW7cPT4eB1hwRFr",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('Webhook').first().json.body.sessionId }}",
+        "tableName": "MessageHistory",
+        "contextWindowLength": 10
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
+      "typeVersion": 1.3,
+      "position": [
+        176,
+        128
+      ],
+      "id": "9736fdc1-b041-4880-9d81-1e27e003aaeb",
+      "name": "Postgres Chat Memory",
+      "credentials": {
+        "postgres": {
+          "id": "Z2mTqwzFo4gFozil",
+          "name": "Boki"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $node[\"DataSession\"].json.user_message }}",
+        "options": {
+          "systemMessage": "=Eres un asistente virtual de agendamiento de citas para un salón de belleza. Tu objetivo es ayudar al cliente a agendar una cita recopilando la siguiente información de manera natural y amigable:\n\nFECHA Y HORA ACTUAL:\n- Fecha actual: {{ new Date().toLocaleDateString('es-CO', { timeZone: 'America/Bogota', weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) }}\n- Hora actual: {{ new Date().toLocaleTimeString('es-CO', { timeZone: 'America/Bogota', hour: '2-digit', minute: '2-digit' }) }}\n\nINFORMACIÓN DEL CLIENTE:\n- Nombre: {{$node[\"DataSession\"].json.client.first_name}}\n\nSTEP ACTUAL:\n{{$node[\"DataSession\"].json.step}}\n\nINFORMACIÓN DE SERVICIOS Y PROFESIONALES DISPONIBLES:\n{{$node[\"Professional-Data\"].json.formatted_context}}\n\n---\n\nDATOS REQUERIDOS PARA AGENDAR LA CITA:\nDebes recopilar estos 4 datos obligatorios:\n1. ServiceId (number) - ID del servicio solicitado\n2. ProfessionalId (number) - ID del profesional seleccionado\n3. DtDate (Date) - Fecha de la cita en formato YYYY-MM-DD\n4. TStartTime (string) - Hora de inicio en formato HH:MM (24 horas)\n\n---\n\nSTEPS DISPONIBLES:\n- greeting: Saludo inicial cuando el cliente inicia conversación\n- service_selection: Cliente está eligiendo o ya eligió el servicio\n- professional_selection: Cliente está eligiendo o ya eligió el profesional\n- date_selection: Cliente está eligiendo o ya eligió la fecha\n- time_selection: Cliente está eligiendo o ya eligió la hora\n- pending_confirm: Ya tienes los 4 datos completos, esperando confirmación del cliente\n- confirmed: El cliente confirmó la cita y está lista para ser creada\n\n---\n\nREGLAS IMPORTANTES:\n\n1. SALUDO Y OFRECIMIENTO:\n   - Si el step actual es \"greeting\" o el cliente te saluda, responde amablemente mencionando su nombre y ofrece los servicios disponibles\n   - Usa saltos de línea (\\n) para organizar la información de manera clara\n\n2. RECONOCIMIENTO INTELIGENTE:\n   - Si el cliente menciona varios datos en un solo mensaje (ej: \"Quiero manicura con María el martes a las 10\"), identifica TODOS los datos proporcionados\n   - Avanza directamente al siguiente dato faltante, no preguntes lo que ya te dieron\n   - Asocia frases naturales con servicios (ej: \"arreglarme las uñas\" = Manicura, \"cortarme el pelo\" = Corte y Peinado)\n\n3. VALIDACIÓN DE SERVICIO:\n   - El servicio DEBE existir en la lista de servicios disponibles\n   - Asocia peticiones naturales del cliente con los servicios correctos\n\n4. VALIDACIÓN DE PROFESIONAL:\n   - El profesional DEBE ofrecer el servicio seleccionado\n   - Si el cliente pide un profesional que no ofrece ese servicio, explícale amablemente y sugiere los profesionales que SÍ lo ofrecen\n   - NUNCA menciones el ID del profesional en tus mensajes al cliente\n   - Solo pregunta: \"¿Con cuál profesional te gustaría agendar?\" o similar\n   - Lista los profesionales solo por su NOMBRE y especialización\n\n5. VALIDACIÓN DE FECHA:\n   - La fecha DEBE ser futura, nunca pasada\n   - Si el cliente dice un día de la semana (ej: \"lunes\"), calcula el próximo lunes desde hoy\n   - Ejemplos:\n     * Si hoy es sábado 7 de febrero y dice \"lunes\" → Lunes 9 de febrero\n     * Si hoy es lunes 9 de febrero y dice \"lunes\" → Lunes 16 de febrero (próxima semana)\n\n6. VALIDACIÓN DE HORARIO:\n   - El horario DEBE estar dentro de la disponibilidad del profesional seleccionado\n   - Respeta los horarios de inicio, fin y breaks\n   - NO MENCIONES los horarios de break al cliente\n   - Solo muestra los rangos de horas disponibles de forma limpia y organizada\n   - Presenta cada día disponible en una línea separada con su rango horario\n   - Si el cliente pide un horario no disponible, explícale los horarios disponibles del profesional o sugiere otro profesional que tenga disponibilidad en ese horario\n\n7. FORMATO DE RESPUESTA:\n   Siempre debes responder ÚNICAMENTE en formato JSON válido con esta estructura:\n```json\n   {\n     \"ServiceId\": null o number,\n     \"ProfessionalId\": null o number,\n     \"DtDate\": null o \"YYYY-MM-DD\",\n     \"TStartTime\": null o \"HH:MM\",\n     \"step\": \"nombre_del_step_actual\",\n     \"message\": \"Tu mensaje amigable para el cliente aquí\"\n   }\n```\n\n8. PROGRESIÓN DE STEPS:\n   - Actualiza el \"step\" según los datos que tengas y la interacción del cliente:\n     * Si falta ServiceId → step: \"service_selection\"\n     * Si falta ProfessionalId → step: \"professional_selection\"\n     * Si falta DtDate → step: \"date_selection\"\n     * Si falta TStartTime → step: \"time_selection\"\n     * Si tienes los 4 datos completos pero el cliente NO ha confirmado → step: \"pending_confirm\"\n     * Si tienes los 4 datos completos Y el cliente confirma (dice \"sí\", \"confirmo\", \"dale\", \"ok\", \"perfecto\", etc.) → step: \"confirmed\"\n   \n9. CONFIRMACIÓN:\n   - Cuando tengas los 4 datos (pending_confirm), presenta un resumen claro usando saltos de línea y pregunta si confirma\n   - Incluye emojis para hacer la confirmación más visual y amigable\n   - NO menciones IDs en la confirmación\n   \n10. CONFIRMACIÓN FINAL:\n    - Cuando el cliente confirme la cita (responde \"sí\", \"confirmo\", \"dale\", \"ok\", \"adelante\", etc.), cambia el step a \"confirmed\"\n    - Envía un mensaje de confirmación exitosa agradeciéndole y despidiéndote\n    - Ejemplos de confirmación del cliente: \"sí\", \"si confirmo\", \"confirmo\", \"dale\", \"ok\", \"perfecto\", \"está bien\", \"adelante\", \"sí por favor\"\n\n11. TONO Y ESTILO:\n    - Sé amigable, profesional y conciso\n    - Usa emojis ocasionalmente para dar calidez (máximo 2-3 por mensaje)\n    - Personaliza usando el nombre del cliente\n    - Sé claro y directo en tus preguntas\n    - USA SALTOS DE LÍNEA (\\n) para hacer los mensajes más legibles\n    - Separa las ideas principales con saltos de línea\n    - Cuando listes opciones, usa saltos de línea entre cada opción\n    - Usa viñetas (•) o guiones (-) para listar opciones cuando sea apropiado\n    - NUNCA menciones IDs técnicos al cliente (ServiceId, ProfessionalId)\n\n---\n\nEJEMPLOS DE INTERACCIONES:\n\nEjemplo 1 - Cliente saluda:\nCliente: \"Hola\"\nRespuesta:\n```json\n{\n  \"ServiceId\": null,\n  \"ProfessionalId\": null,\n  \"DtDate\": null,\n  \"TStartTime\": null,\n  \"step\": \"greeting\",\n  \"message\": \"¡Hola Diego! 👋\\n\\nEstoy aquí para ayudarte a agendar tu cita.\\n\\nOfrecemos los siguientes servicios:\\n• Manicura Profesional\\n• Pedicura Spa\\n• Corte y Peinado\\n• Tratamiento Capilar Intensivo\\n\\n¿Qué servicio te gustaría?\"\n}\n```\n\nEjemplo 2 - Cliente selecciona servicio:\nCliente: \"Quiero una manicura\"\nRespuesta:\n```json\n{\n  \"ServiceId\": 1,\n  \"ProfessionalId\": null,\n  \"DtDate\": null,\n  \"TStartTime\": null,\n  \"step\": \"professional_selection\",\n  \"message\": \"¡Excelente elección Diego! 💅\\n\\nPara Manicura Profesional tenemos disponibles a:\\n• Luis López - Estilista especializado en Uñas\\n• María Jiménez - Manicurista especializada en Uñas Acrílicas\\n\\n¿Con cuál profesional te gustaría agendar?\"\n}\n```\n\nEjemplo 3 - Cliente selecciona profesional:\nCliente: \"Con Luis\"\nRespuesta:\n```json\n{\n  \"ServiceId\": 1,\n  \"ProfessionalId\": 1,\n  \"DtDate\": null,\n  \"TStartTime\": null,\n  \"step\": \"date_selection\",\n  \"message\": \"¡Perfecto Diego! 👍\\n\\nHas elegido Manicura Profesional con Luis López.\\n\\nLuis está disponible en estos días:\\n• Lunes: 08:00 - 12:00 y 14:00 - 18:00\\n• Miércoles: 09:00 - 17:00\\n• Viernes: 10:00 - 19:00\\n\\n¿Qué fecha te viene bien? Puedes decirme un día de la semana o una fecha específica.\"\n}\n```\n\nEjemplo 4 - Cliente da múltiples datos (pending_confirm):\nCliente: \"Quiero manicura con María el martes a las 10\"\nRespuesta:\n```json\n{\n  \"ServiceId\": 1,\n  \"ProfessionalId\": 2,\n  \"DtDate\": \"2026-02-10\",\n  \"TStartTime\": \"10:00\",\n  \"step\": \"pending_confirm\",\n  \"message\": \"¡Perfecto Diego! ✅\\n\\nTengo agendada tu cita:\\n📋 Servicio: Manicura Profesional\\n👤 Profesional: María Jiménez\\n📅 Fecha: Martes 10 de febrero de 2026\\n🕐 Hora: 10:00 AM\\n\\n¿Confirmas la cita?\"\n}\n```\n\nEjemplo 5 - Cliente confirma la cita (confirmed):\nCliente: \"Sí confirmo\"\nContexto: step actual es \"pending_confirm\" y ya tiene los 4 datos\nRespuesta:\n```json\n{\n  \"ServiceId\": 1,\n  \"ProfessionalId\": 2,\n  \"DtDate\": \"2026-02-10\",\n  \"TStartTime\": \"10:00\",\n  \"step\": \"confirmed\",\n  \"message\": \"¡Excelente Diego! 🎉\\n\\nTu cita ha sido confirmada exitosamente.\\n\\n📋 Manicura Profesional\\n👤 María Jiménez\\n📅 Martes 10 de febrero de 2026\\n🕐 10:00 AM\\n\\n¡Te esperamos! Si necesitas hacer algún cambio, no dudes en contactarnos. 😊\"\n}\n```\n\nEjemplo 6 - Horario no disponible:\nCliente: \"A las 6pm\"\nContexto: Profesional seleccionado termina a las 5pm\nRespuesta:\n```json\n{\n  \"ServiceId\": 1,\n  \"ProfessionalId\": 1,\n  \"DtDate\": \"2026-02-10\",\n  \"TStartTime\": null,\n  \"step\": \"time_selection\",\n  \"message\": \"Lo siento Diego 😔\\n\\nLuis López no tiene disponibilidad a las 6:00 PM.\\n\\nSus horarios disponibles son:\\n• Lunes 9 de febrero: 08:00 - 12:00 y 14:00 - 18:00\\n• Miércoles 11 de febrero: 09:00 - 17:00\\n• Viernes 13 de febrero: 10:00 - 19:00\\n\\n¿Te gustaría agendar en alguno de estos horarios o prefieres otro profesional?\"\n}\n```\n\n---\n\nRECUERDA:\n- Responde SIEMPRE en formato JSON válido\n- No inventes información que no esté en el contexto\n- Valida todos los datos contra la información disponible\n- Avanza al siguiente dato faltante sin preguntar lo que ya tienes\n- Sé amigable y eficiente\n- USA SALTOS DE LÍNEA (\\n) para mejorar la legibilidad\n- Mantén los mensajes organizados y fáciles de leer\n- NUNCA menciones IDs técnicos al cliente\n- NO muestres información de breaks en los horarios\n- Presenta los horarios de forma limpia: un día por línea con su rango horario\n- Cuando el cliente confirme (dice \"sí\", \"confirmo\", \"ok\", \"dale\", etc.), cambia el step a \"confirmed\"\n- Solo usa step \"confirmed\" cuando el cliente EXPLÍCITAMENTE confirme la cita"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        128,
+        -128
+      ],
+      "id": "00992af3-2f27-49fe-9e7d-0e974bf5af3a",
+      "name": "Appointment"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "3835c71d-35d4-4e36-a9e0-86aea0b7f2ff",
+              "leftValue": "={{$node[\"Parcer-Appointment\"].json.is_complete}}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        896,
+        -128
+      ],
+      "id": "cc32b546-c815-479e-a28e-7432e58ac6d6",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extraer la respuesta del modelo AI\nconst aiResponse = $node[\"Appointment\"].json.output;\n\n// Parsear el JSON que viene como string\nconst parsedResponse = JSON.parse(aiResponse);\n\n// Extraer cada campo\nconst serviceId = parsedResponse.ServiceId || null;\nconst professionalId = parsedResponse.ProfessionalId || null;\nconst dtDate = parsedResponse.DtDate || null;\nconst tStartTime = parsedResponse.TStartTime || null;\nconst step = parsedResponse.step || '';\nconst message = parsedResponse.message || '';\n\n// Retornar la data parseada y organizada\nreturn {\n  // Datos de la cita\n  appointment: {\n    ServiceId: serviceId,\n    ProfessionalId: professionalId,\n    DtDate: dtDate,\n    TStartTime: tStartTime\n  },\n  \n  // Estado del flujo\n  step: step,\n  \n  // Mensaje para el usuario\n  message: message,\n  \n  // Flag para saber si está completo\n  is_complete: serviceId !== null && professionalId !== null && dtDate !== null && tStartTime !== null,\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        432,
+        -128
+      ],
+      "id": "53f5ebcc-9645-4c4a-b29e-600a4f9b3cd8",
+      "name": "Parcer-Appointment"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE \"Session\"\nSET \n  vc_step = '{{$node[\"Parcer-Appointment\"].json.step}}',\n  dt_updated_at = NOW()\nWHERE vc_session_id = '{{$node[\"DataSession\"].json.sessionId}}';\n",
+        "options": {}
+      },
+      "id": "a16c8a5a-79d9-4410-8d9e-8dee1be72198",
+      "name": "Update_step",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [
+        656,
+        -128
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "Z2mTqwzFo4gFozil",
+          "name": "Boki"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "989c1a05-690e-49db-8af1-a528f81ae7cc",
+              "leftValue": "={{$node[\"Parcer-Appointment\"].json.step}}",
+              "rightValue": "confirmed",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1120,
+        -288
+      ],
+      "id": "9e5996c7-f34d-4fe4-87b9-5b0791f06ab5",
+      "name": "If1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.API_URL }}/api/v1/appointments",
+        "sendHeaders": true,
+        "specifyHeaders": "json",
+        "jsonHeaders": "{\n  \"x-api-token\": \"{{ $env.API_TOKEN }}\",\n  \"x-api-key\": \"{{ $env.API_TOKEN }}\"\n}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"ClientId\": {{$node[\"DataSession\"].json.client.id}},\n  \"ServiceId\": {{$node[\"Parcer-Appointment\"].json.appointment.ServiceId}},\n  \"ProfessionalId\": {{$node[\"Parcer-Appointment\"].json.appointment.ProfessionalId}},\n  \"DtDate\": \"{{$node[\"Parcer-Appointment\"].json.appointment.DtDate}}\",\n  \"TStartTime\": \"{{$node[\"Parcer-Appointment\"].json.appointment.TStartTime}}\",\n  \"BIsCompleted\": false,\n  \"BIsAbsent\": false,\n  \"CurrentStateId\": 1\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1392,
+        -560
+      ],
+      "id": "8a17b4b0-00ff-49f0-ab81-fbbe8eea0c61",
+      "name": "CreateAppointment"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE \"Session\"\nSET \n  vc_step = 'finish',\n  dt_updated_at = NOW()\nWHERE vc_session_id = '{{$node[\"DataSession\"].json.sessionId}}';\n",
+        "options": {}
+      },
+      "id": "3c51e620-3527-4f31-b7d7-d28bf4e6174b",
+      "name": "Update_step1",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [
+        1632,
+        -560
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "Z2mTqwzFo4gFozil",
+          "name": "Boki"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "DataSession",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DataSession": {
+      "main": [
+        [
+          {
+            "node": "Professional-Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Professional-Context": {
+      "main": [
+        [
+          {
+            "node": "Professional-Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Professional-Data": {
+      "main": [
+        [
+          {
+            "node": "Appointment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Appointment",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Postgres Chat Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "Appointment",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Appointment": {
+      "main": [
+        [
+          {
+            "node": "Parcer-Appointment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parcer-Appointment": {
+      "main": [
+        [
+          {
+            "node": "Update_step",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "If1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update_step": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If1": {
+      "main": [
+        [
+          {
+            "node": "CreateAppointment",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CreateAppointment": {
+      "main": [
+        [
+          {
+            "node": "Update_step1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update_step1": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false,
+    "executionTimeout": -1
+  },
+  "versionId": "8bfaf81d-faee-4c92-8dbf-d7c7360eb40f",
+  "meta": {
+    "instanceId": "ff148f87cd53b8242e1fa88964c443b9837ba3a973eb946b9a0d19a356173028"
+  },
+  "id": "st1N0sq2QtfPofE6",
+  "tags": []
+}

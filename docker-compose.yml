@@ -99,8 +99,10 @@ services:
       - POSTGRES_DB=${POSTGRES_SOLERCIA_DB}
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-    ports:
-      - "5433:5432"
+    # SECURITY: Puerto solo accesible dentro de la red Docker
+    # Para acceder desde el host, descomentar temporalmente:
+    # ports:
+    #   - "127.0.0.1:5433:5432"
     volumes:
       - "postgres-data:/var/lib/postgresql/data"
     healthcheck:
@@ -239,9 +241,9 @@ services:
     container_name: mongo_boki
     restart: unless-stopped
     environment:
-      MONGO_INITDB_ROOT_USERNAME: admin
-      MONGO_INITDB_ROOT_PASSWORD: admin123F
-      MONGO_INITDB_DATABASE: boki_mongo
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD}
+      MONGO_INITDB_DATABASE: ${MONGO_DB_NAME}
     volumes:
       - mongo_data:/data/db
       - mongo_config:/data/configdb
@@ -290,7 +292,7 @@ services:
       POSTGRES_DB_NAME: ${POSTGRES_DB_NAME}
 
       # MongoDB interno
-      MONGO_URI: mongodb://admin:admin123@mongo_db:27017/boki_mongo?authSource=admin
+      MONGO_URI: mongodb://${MONGO_USER}:${MONGO_PASSWORD}@mongo_db:27017/${MONGO_DB_NAME}?authSource=admin
 
       # JWT
       JWT_SECRET: ${JWT_SECRET}

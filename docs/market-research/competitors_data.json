@@ -1,0 +1,148 @@
+{
+  "tidio": {
+    "urls": {
+      "url": "https://www.tidio.com",
+      "pricing": "https://www.tidio.com/pricing/"
+    },
+    "url_data": {
+      "title": "",
+      "description": "Scale customer service without losing the human touch. Align a trustworthy AI agent with live chat and helpdesk tools, trusted by 300k+ businesses worldwide",
+      "prices_found": [],
+      "status": "ok"
+    },
+    "pricing_data": {
+      "title": "Tidio - AI customer service chatbot software - home page",
+      "description": "Try Tidio for free. Then stay on the free plan forever or upgrade your account and enjoy all of Tidio\u2019s premium features.",
+      "prices_found": [],
+      "status": "ok"
+    }
+  },
+  "manychat": {
+    "urls": {
+      "url": "https://manychat.com",
+      "pricing": "https://manychat.com/pricing"
+    },
+    "url_data": {
+      "error": "HTTP Error 403: Forbidden",
+      "status": "failed"
+    },
+    "pricing_data": {
+      "error": "HTTP Error 403: Forbidden",
+      "status": "failed"
+    }
+  },
+  "landbot": {
+    "urls": {
+      "url": "https://landbot.io",
+      "pricing": "https://landbot.io/pricing"
+    },
+    "url_data": {
+      "title": "AI Agent &amp; Chatbot Builder for WhatsApp + Website | Landbot",
+      "description": "Build AI Agents in minutes that qualify leads, support customers and connected with your stack. Combine structured flows, AI flexibility, and branded UIs that convert.",
+      "prices_found": [],
+      "status": "ok"
+    },
+    "pricing_data": {
+      "title": "Landbot Pricing | Plans for Website &amp; WhatsApp Chatbots",
+      "description": "",
+      "prices_found": [],
+      "status": "ok"
+    }
+  },
+  "botpress": {
+    "urls": {
+      "url": "https://botpress.com",
+      "pricing": "https://botpress.com/pricing"
+    },
+    "url_data": {
+      "title": "",
+      "description": "3a59ea4a74ae61eb2a0665d75c647b7d6d8c1e04e5bb7666f263c62f81f508af",
+      "prices_found": [],
+      "status": "ok"
+    },
+    "pricing_data": {
+      "title": "",
+      "description": "135253ec16f0b12f4a1bc8cf48c1b1f4568e546142caef1cf30b79ffddb0c7a7",
+      "prices_found": [
+        "$5"
+      ],
+      "status": "ok"
+    }
+  },
+  "tawk": {
+    "urls": {
+      "url": "https://www.tawk.to",
+      "pricing": "https://www.tawk.to/pricing/"
+    },
+    "url_data": {
+      "title": "tawk.to &#8211; &quot;100% FREE live chat software for your website!&quot;",
+      "description": "",
+      "prices_found": [],
+      "status": "ok"
+    },
+    "pricing_data": {
+      "title": "Pricing &#8211; tawk.to",
+      "description": "",
+      "prices_found": [],
+      "status": "ok"
+    }
+  },
+  "respond_io": {
+    "urls": {
+      "url": "https://respond.io",
+      "pricing": "https://respond.io/pricing"
+    },
+    "url_data": {
+      "title": "Respond.io | #1 AI-Powered Customer Conversation Management Software",
+      "description": "Trusted by 10,000+ B2C businesses to scale customer chats, calls &amp; campaigns. Unify WhatsApp, TikTok, Instagram &amp; Facebook in a team inbox with AI Agents on respond.io",
+      "prices_found": [],
+      "status": "ok"
+    },
+    "pricing_data": {
+      "title": "Pricing | Plans Built to Scale Your Business",
+      "description": "Respond.io offers 4 plans: Starter ($79/mo), Growth ($159/mo), Advanced ($279/mo) &amp; Enterprise. Pay only for the contacts you talk to. Enjoy a free 7-day trial.",
+      "prices_found": [
+        "$279/mo",
+        "$159/mo",
+        "$79/mo"
+      ],
+      "status": "ok"
+    }
+  },
+  "wati": {
+    "urls": {
+      "url": "https://www.wati.io",
+      "pricing": "https://www.wati.io/pricing/"
+    },
+    "url_data": {
+      "title": "Wati | Business Messaging Made Simple on Your Favourite App!",
+      "description": "Trusted by the fastest growing brands in over 78 countries. Wati is the #1 end-to-end WhatsApp API solution for SMBs across the globe.",
+      "prices_found": [],
+      "status": "ok"
+    },
+    "pricing_data": {
+      "title": "Wati Pricing | WhatsApp Business API",
+      "description": "Find the perfect Wati plan for your business needs. Explore our different options with various features. Start your free trial today!",
+      "prices_found": [],
+      "status": "ok"
+    }
+  },
+  "trengo": {
+    "urls": {
+      "url": "https://trengo.com",
+      "pricing": "https://trengo.com/pricing"
+    },
+    "url_data": {
+      "title": "Plataforma de captaci\u00f3n de clientes para una comunicaci\u00f3n omnicanal sin fisuras",
+      "description": "",
+      "prices_found": [],
+      "status": "ok"
+    },
+    "pricing_data": {
+      "title": "Precios y planes de Trengo: Opciones flexibles que se adaptan a tu negocio",
+      "description": "",
+      "prices_found": [],
+      "status": "ok"
+    }
+  }
+}

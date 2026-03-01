@@ -1,0 +1,625 @@
+{
+  "name": "MainFlow",
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "// Extraer datos del webhook de WhatsApp usando la sintaxis correcta de n8n\nconst phoneNumber = $('InboundMessaage').item.json.messages?.[0]?.from || $('InboundMessaage').item.json.contacts?.[0]?.wa_id;\nconst messageText = $('InboundMessaage').item.json.messages?.[0]?.text?.body || '';\nconst messageId = $('InboundMessaage').item.json.messages?.[0]?.id || '';\nconst timestamp = $('InboundMessaage').item.json.messages?.[0]?.timestamp || '';\nconst displayPhoneNumber = $('InboundMessaage').item.json.metadata?.display_phone_number || '';\nconst phoneNumberId = $('InboundMessaage').item.json.metadata?.phone_number_id || '';\n\n// Función para generar UUID v4\nfunction generateUUID() {\n  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {\n    var r = Math.random() * 16 | 0;\n    var v = c == 'x' ? r : (r & 0x3 | 0x8);\n    return v.toString(16);\n  });\n}\n\n// Generar Session ID con prefijo MP (Mesitas Personería)\n// OPCIÓN 1: UUID puro (probabilidad de colisión prácticamente cero)\nfunction generateSessionId() {\n  const uuid = generateUUID();\n  return `MP_${uuid}`;\n}\n\n// OPCIÓN 2: UUID + timestamp (100% garantizado único)\nfunction generateSessionIdWithTimestamp() {\n  const timestamp = Date.now();\n  const uuid = generateUUID().substring(0, 8); // Usar solo 8 caracteres del UUID\n  return `MP_${timestamp}_${uuid}`;\n}\n\n// Verificar si es mensaje válido\nif (!phoneNumber || !messageText) {\n  return [{\n    json: {\n      error: \"Datos incompletos del mensaje\",\n      session_id: null,\n      phone_number: phoneNumber || \"unknown\",\n      raw_data: $('InboundMessaage').item.json\n    }\n  }];\n}\n\n// Generar nuevo session ID\nconst sessionId = generateSessionId();\n\n// Preparar datos de sesión\nconst sessionData = {\n  session_id: sessionId,\n  phone_number: phoneNumber,\n  message_text: messageText.trim(),\n  message_id: messageId,\n  whatsapp_timestamp: timestamp,\n  display_phone: displayPhoneNumber,\n  phone_number_id: phoneNumberId,\n  entity: \"personeria_mesitas\",\n  session_state: \"active\",\n  current_step: \"welcome\",\n  is_new_session: true,\n  context: {\n    first_message: messageText.trim(),\n    user_phone: phoneNumber,\n    start_time: new Date().toISOString()\n  },\n  created_at: new Date().toISOString(),\n  last_activity: new Date().toISOString()\n};\n\n// Log para debugging\nconsole.log(`Nueva sesión creada: ${sessionId} para ${phoneNumber}`);\nconsole.log(`Mensaje recibido: \"${messageText}\"`);\nconsole.log(`Phone Number ID: ${phoneNumberId}`);\n\n// Retornar datos para el siguiente nodo\nreturn [{\n  json: sessionData\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2320,
+        96
+      ],
+      "id": "7d6a5402-2063-49a0-8193-525856afe10e",
+      "name": "DataSession"
+    },
+    {
+      "parameters": {
+        "updates": [
+          "messages"
+        ],
+        "options": {}
+      },
+      "type": "n8n-nodes-base.whatsAppTrigger",
+      "typeVersion": 1,
+      "position": [
+        -3104,
+        -240
+      ],
+      "id": "ab40baa8-1943-4161-890b-41c6965b0447",
+      "name": "InboundMessaage",
+      "webhookId": "39f624e9-fe4f-486d-abc4-642c10cb3086",
+      "credentials": {
+        "whatsAppTriggerApi": {
+          "id": "AzF1g5CgsWJzDdiD",
+          "name": "WhatsApp OAuth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "b14a9554-9e19-46d2-84dc-50d90c30e808",
+              "leftValue": "={{ $json.vc_step != 'finish' }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "af4ffbfa-7b46-431b-b591-17e8c8f90e14",
+              "leftValue": "={{ $json.vc_step }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -2480,
+        -64
+      ],
+      "id": "a4058428-4b4e-47c8-8f09-703c3734e3b4",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "={\n  \"sessionId\": \"{{ $json.vc_session_id }}\",\n  \"vc_step\": \"{{$json.vc_step}}\"\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -2016,
+        -80
+      ],
+      "id": "3410f67e-0656-4d18-9abd-6ef0b230c02c",
+      "name": "sessionId"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "select\n\t*\nfrom \"Session\" s \nwhere s.vc_phone = '{{$node[\"InboundMessaage\"].json.contacts[0].wa_id}}'\norder by dt_created_at desc\nlimit 1",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -2624,
+        -64
+      ],
+      "id": "7f2bba97-db7e-4db1-abb7-505febb1745b",
+      "name": "UltimaSession",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "Z2mTqwzFo4gFozil",
+          "name": "Boki"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO \"Session\" (\n    vc_session_id,\n    vc_step,\n    vc_phone,\n    vc_workflow_id\n) VALUES (\n    '{{ $('DataSession').item.json.session_id }}',\n    'welcome',\n    '{{ $json.context.user_phone }}',\n    '{{ $workflow.id }}'\n) RETURNING *;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -2176,
+        96
+      ],
+      "id": "6ecc0f50-a861-405e-86a7-f6b64878f7cc",
+      "name": "NewSession",
+      "credentials": {
+        "postgres": {
+          "id": "Z2mTqwzFo4gFozil",
+          "name": "Boki"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "select \n    c.\"Id\",\n\tvc_identification_number,\n\tvc_phone,\n\tvc_nick_name,\n\tvc_first_name,\n\tvc_email \nfrom \"Client\" c \nleft join \"CompanyWhatsappSetting\" cws on cws.company_id = c.company_id \nwhere cws.vc_phone_number_id = '{{$node[\"InboundMessaage\"].json.metadata.phone_number_id}}'\nand c.vc_phone = '{{$node[\"InboundMessaage\"].json.contacts[0].wa_id}}'",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -2768,
+        -64
+      ],
+      "id": "c0ebd05d-5c85-4981-b5d5-6e9a54f08e0a",
+      "name": "Client",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "Z2mTqwzFo4gFozil",
+          "name": "Boki"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "3835ec2d-8996-40cb-9502-c21df819ec19",
+              "leftValue": "={{$node[\"Client\"].json.vc_identification_number ? true : false }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "d8dc0894-43fd-4abd-945a-91e14d9d97db",
+              "leftValue": "={{$node[\"Client\"].json.vc_first_name ? true : false }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -1424,
+        -80
+      ],
+      "id": "b91ee290-a161-44f4-8edc-b949da777c9a",
+      "name": "ClientValidate"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "select \n\tc.\"Id\" as company_id\nfrom \"Company\" c \ninner join \"CompanyWhatsappSetting\" cws on cws.company_id = c.\"Id\" \nwhere cws.vc_phone_number_id = '{{$node[\"InboundMessaage\"].json.metadata.phone_number_id}}'",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -1856,
+        -80
+      ],
+      "id": "12dd9b0c-6000-4587-a77c-c0e2fb69ccb8",
+      "name": "CompanyId",
+      "credentials": {
+        "postgres": {
+          "id": "Z2mTqwzFo4gFozil",
+          "name": "Boki"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://flows.solercia.com.co/webhook/6eeb66a5-1495-4b9c-971a-a3029da3d3e9",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"sessionId\": \"{{$node[\"sessionId\"].json.sessionId}}\",\n  \"vc_phone\" : \"{{$node[\"InboundMessaage\"].json.contacts[0].wa_id}}\",\n  \"vc_nick\": \"{{$node[\"InboundMessaage\"].json.contacts[0].profile.name}}\",\n  \"company_id\": {{$node[\"CompanyId\"].json.company_id}},\n  \"user_message\": \"{{$node[\"InboundMessaage\"].json.messages[0].text.body}}\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -1184,
+        48
+      ],
+      "id": "7811790a-b143-4be2-84f5-7c336ad3239a",
+      "name": "RegisterFlow"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "37c97587-188d-496a-9b9b-c01ef9c932d0",
+              "leftValue": "={{$node[\"InboundMessaage\"].json.contacts[0].wa_id}}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -2960,
+        16
+      ],
+      "id": "f67cc948-de5f-469e-8368-b3f74936df66",
+      "name": "If2"
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "={{$node[\"InboundMessaage\"].json.metadata.phone_number_id}}",
+        "recipientPhoneNumber": "={{$node[\"InboundMessaage\"].json.contacts[0].wa_id}}",
+        "textBody": "={{$node[\"RegisterFlow\"].json.text.body }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1,
+      "position": [
+        -992,
+        48
+      ],
+      "id": "c2f37a57-6572-4acc-8520-8840dd67112c",
+      "name": "OutboundMessaage",
+      "webhookId": "4bee11cb-178a-47c1-82dd-c50d070aa409",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "uCyfrz0mYfkYmqfY",
+          "name": "WhatsApp account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://flows.solercia.com.co/webhook/5f2c4d87-7812-4594-96f2-f7f2803840d3",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"sessionId\": \"{{$node[\"sessionId\"].json.sessionId}}\",\n  \"company_id\": {{$node[\"CompanyId\"].json.company_id}},\n  \"vc_user_name\": \"{{$node[\"DataClient\"].json.vc_first_name}}\",\n  \"user_message\": \"{{$node[\"InboundMessaage\"].json.messages[0].text.body}}\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -1008,
+        -480
+      ],
+      "id": "751b8999-c2b8-4f77-9010-f463ce2a240d",
+      "name": "FaqsFlow"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "select \n\tvc_identification_number,\n\tvc_first_name \nfrom \"Client\" c \nwhere vc_phone = '{{$node[\"InboundMessaage\"].json.contacts[0].wa_id}}'",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -1200,
+        -480
+      ],
+      "id": "1e4be5aa-adc5-4cbe-9ec8-726d0b008b3b",
+      "name": "DataClient",
+      "credentials": {
+        "postgres": {
+          "id": "Z2mTqwzFo4gFozil",
+          "name": "Boki"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "={{$node[\"InboundMessaage\"].json.metadata.phone_number_id}}",
+        "recipientPhoneNumber": "={{$node[\"InboundMessaage\"].json.contacts[0].wa_id}}",
+        "textBody": "={{$node[\"FaqsFlow\"].json.output.message }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1,
+      "position": [
+        -816,
+        -480
+      ],
+      "id": "5eaf3453-6a8f-48c0-b7de-08129f02c079",
+      "name": "OutboundMessaage1",
+      "webhookId": "4bee11cb-178a-47c1-82dd-c50d070aa409",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "uCyfrz0mYfkYmqfY",
+          "name": "WhatsApp account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://flows.solercia.com.co/webhook/7e145415-70db-43da-8158-7ae12133f8c4",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"sessionId\": \"{{$node[\"sessionId\"].json.sessionId}}\",\n  \"company_id\": {{$node[\"CompanyId\"].json.company_id}},\n  \"client\": {{JSON.stringify($node[\"Client\"].json)}},\n  \"user_message\": \"{{$node[\"InboundMessaage\"].json.messages[0].text.body}}\",\n  \"vc_step\": \"{{$node[\"sessionId\"].json.vc_step}}\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -1184,
+        -208
+      ],
+      "id": "697bbd26-a7b6-4a54-a254-ae0b72320a1e",
+      "name": "AppointmentFlow"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO \"MessageHistory\" (\n    vc_session_id,\n    vc_user_name,\n    vc_message\n) VALUES (\n    '{{$node[\"sessionId\"].json.sessionId}}',\n    '{{$node[\"Client\"].json.vc_first_name}}',\n    '{{$node[\"InboundMessaage\"].json.messages[0].text.body}}'\n) RETURNING *;",
+        "options": {}
+      },
+      "id": "aad045ff-4e10-41fc-89a8-093d15f092bd",
+      "name": "Insert-User-Message",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [
+        -1664,
+        -80
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "Z2mTqwzFo4gFozil",
+          "name": "Boki"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "={{$node[\"InboundMessaage\"].json.metadata.phone_number_id}}",
+        "recipientPhoneNumber": "={{$node[\"InboundMessaage\"].json.contacts[0].wa_id}}",
+        "textBody": "={{$node[\"AppointmentFlow\"].json.message }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1,
+      "position": [
+        -976,
+        -208
+      ],
+      "id": "0b5002a7-67d5-48fb-9a34-20dbc4e4a7c0",
+      "name": "OutboundMessaage2",
+      "webhookId": "4bee11cb-178a-47c1-82dd-c50d070aa409",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "uCyfrz0mYfkYmqfY",
+          "name": "WhatsApp account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "DataSession": {
+      "main": [
+        [
+          {
+            "node": "NewSession",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "InboundMessaage": {
+      "main": [
+        [
+          {
+            "node": "If2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "sessionId",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "DataSession",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "sessionId": {
+      "main": [
+        [
+          {
+            "node": "CompanyId",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "UltimaSession": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "NewSession": {
+      "main": [
+        [
+          {
+            "node": "sessionId",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Client": {
+      "main": [
+        [
+          {
+            "node": "UltimaSession",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ClientValidate": {
+      "main": [
+        [
+          {
+            "node": "AppointmentFlow",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "RegisterFlow",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CompanyId": {
+      "main": [
+        [
+          {
+            "node": "Insert-User-Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "RegisterFlow": {
+      "main": [
+        [
+          {
+            "node": "OutboundMessaage",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If2": {
+      "main": [
+        [
+          {
+            "node": "Client",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DataClient": {
+      "main": [
+        [
+          {
+            "node": "FaqsFlow",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "FaqsFlow": {
+      "main": [
+        [
+          {
+            "node": "OutboundMessaage1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert-User-Message": {
+      "main": [
+        [
+          {
+            "node": "ClientValidate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AppointmentFlow": {
+      "main": [
+        [
+          {
+            "node": "OutboundMessaage2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "7ae2082b-9836-4ccf-ae70-6f2b91527f37",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "ff148f87cd53b8242e1fa88964c443b9837ba3a973eb946b9a0d19a356173028"
+  },
+  "id": "kjoNKUfmgOzVUJos",
+  "tags": []
+}

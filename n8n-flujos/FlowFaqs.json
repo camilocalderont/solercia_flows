@@ -1,0 +1,595 @@
+{
+  "name": "FlowFaqs",
+  "nodes": [
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-5-nano",
+          "mode": "list",
+          "cachedResultName": "gpt-5-nano"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        80,
+        -480
+      ],
+      "id": "2f63702e-829c-452d-8911-c8c3ac18eeab",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "7yW7cPT4eB1hwRFr",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $node[\"Webhook\"].json.body.user_message }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "=Clasificador de intenciones - Personería Mesitas del Colegio.\n\nCATEGORÍAS:\n{{ JSON.stringify($node[\"CompanyServices\"].json.services) }}\n\nESPECIALES:\n- welcome: saludos/presentaciones\n- finish: despedidas/agradecimientos\n\nINSTRUCCIONES:\nAnaliza el mensaje y clasifica según categorías. Para consultas específicas usa \"vc_name\" + su Id. Para saludos/despedidas usa welcome/finish + null.\n\nFORMATO:\n{\"intencion\": \"categoria_o_welcome_o_finish\", \"idIntencion\": numero_o_null}\n\nEJEMPLOS:\n\"Hola\" → {\"intencion\": \"welcome\", \"idIntencion\": null}\n\"Mi vecino hace ruido\" → {\"intencion\": \"Problemas de convivencia ciudadana\", \"idIntencion\": 3}\n\"Gracias\" → {\"intencion\": \"finish\", \"idIntencion\": null}"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        0,
+        112
+      ],
+      "id": "4e86ba14-81c6-40fb-917e-27c8ef2d0bd6",
+      "name": "ContextAgent",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('Webhook').first().json.body.sessionId }}",
+        "tableName": "MessageHistory",
+        "contextWindowLength": 10
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
+      "typeVersion": 1.3,
+      "position": [
+        400,
+        -496
+      ],
+      "id": "c737be7d-6a69-4b88-8d08-07612ef0e244",
+      "name": "Postgres Chat Memory",
+      "credentials": {
+        "postgres": {
+          "id": "Z2mTqwzFo4gFozil",
+          "name": "Boki"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO \"MessageHistory\" (\n    vc_session_id,\n    vc_user_name,\n    vc_message\n) VALUES (\n    '{{$node[\"Webhook\"].json.body.sessionId}}',\n    '{{$node[\"Webhook\"].json.body.vc_user_name}}',\n    '{{$node[\"Webhook\"].json.body.user_message}}'\n) RETURNING *;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -400,
+        32
+      ],
+      "id": "db485ede-c753-478b-8437-47d2282daf16",
+      "name": "Execute a SQL query4",
+      "credentials": {
+        "postgres": {
+          "id": "Z2mTqwzFo4gFozil",
+          "name": "Boki"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE \"Session\"\nSET \n  vc_step = '{{ $json.output.intencion }}',\n  dt_updated_at = NOW()\nWHERE vc_session_id = '{{$node[\"Webhook\"].json.body.sessionId}}';\n\nSELECT\n*\nfrom \"Session\"\nWHERE vc_session_id = '{{$node[\"Webhook\"].json.body.sessionId}}'",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        352,
+        112
+      ],
+      "id": "78e30192-10d0-4685-bc41-170679da95b4",
+      "name": "Execute a SQL query5",
+      "credentials": {
+        "postgres": {
+          "id": "Z2mTqwzFo4gFozil",
+          "name": "Boki"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "select \n\tc.\"Id\",\n\tc.vc_name,\n\tc.tx_prompt,\n\tcpct.i_max_interaction_tokens,\n\tcpct.i_max_conversation_tokens,\n\tJSON_AGG(\n\t  JSON_BUILD_OBJECT(\n\t    'Id', cs.\"Id\",\n\t    'vc_name', cs.vc_name\n\t  )\n\t) as services\nfrom \"Company\" c \njoin \"CategoryService\" cs on cs.company_id = c.\"Id\" \njoin \"CompanyPlan\" cp on cp.company_id = c.\"Id\" \njoin \"CompanyPlanControlToken\" cpct on cpct.company_plan_id  = cp.\"Id\" \nwhere c.\"Id\" = '{{$node[\"Webhook\"].json.body.company_id}}'\ngroup by 1,2,3,4,5",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -1024,
+        144
+      ],
+      "id": "ab21c2d6-6645-4907-9d70-21de34e3b737",
+      "name": "CompanyServices",
+      "credentials": {
+        "postgres": {
+          "id": "Z2mTqwzFo4gFozil",
+          "name": "Boki"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "select\n  JSON_AGG(\n    JSON_BUILD_OBJECT(\n      'vc_question', f.vc_question,\n      'vc_answer',  f.vc_answer\n    )\n  ) as data_facs\nfrom \"Faqs\" f\nwhere category_service_id = '{{ $items(\"ContextAgent\")[0].json.output?.idIntencion\n  ? $items(\"ContextAgent\")[0].json.output.idIntencion\n  : 0 }}'\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        512,
+        112
+      ],
+      "id": "dddef7eb-2ff9-4b1a-89d5-17899fa3fe24",
+      "name": "Execute a SQL query1",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "Z2mTqwzFo4gFozil",
+          "name": "Boki"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n\t\"type\": \"object\",\n\t\"properties\": {\n\t\t\"message\": {\n\t\t\t\"type\": \"string\",\n\t\t\t\"description\": \"El mensaje generado por el personero\"\n\t\t}\n\t},\n\t\"required\": [\"message\"],\n\t\"additionalProperties\": false\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        960,
+        272
+      ],
+      "id": "24b41d9b-464d-4c51-a177-ab65c56d25d3",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $node[\"Webhook\"].json.body.user_message }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "=[VARIABLES]\n- PERSONERO_NAME: {{ $node[\"CompanyServices\"].json.vc_name }}\n- FAQS_DATA: {{ JSON.stringify($json.data_facs) }}\n- SERVICES_DATA: {{ JSON.stringify($node[\"CompanyServices\"].json.services) }}\n\n\n{{ $node[\"CompanyServices\"].json.tx_prompt }}\n\n"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        736,
+        112
+      ],
+      "id": "219d109e-752c-4704-8237-7571e87f1b18",
+      "name": "GenradorMessage"
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"intencion\": {\n      \"type\": \"string\",\n      \"description\": \"Nombre de la categoría clasificada o 'welcome'/'finish' para casos especiales\"\n    },\n    \"idIntencion\": {\n      \"type\": [\"integer\", \"null\"],\n      \"description\": \"ID numérico de la categoría (1-7) o null para welcome/finish\"\n    }\n  },\n  \"required\": [\"intencion\", \"idIntencion\"],\n  \"additionalProperties\": false\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        224,
+        304
+      ],
+      "id": "9452f993-0683-48b9-83a0-78b0537cd33e",
+      "name": "Structured Output Parser1"
+    },
+    {
+      "parameters": {
+        "amount": 3
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        -1248,
+        160
+      ],
+      "id": "0274512b-16e4-4a92-aea2-8064e9536d31",
+      "name": "Wait",
+      "webhookId": "348e41c7-b747-4bed-8e64-ba5e089a9cfe"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://flows.solercia.com.co/webhook/db792452-3964-4a6d-9249-4de5321372a0",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"executionId\": {{$execution.id}},\n  \"sessionId\":\"{{$node[\"Webhook\"].json.body.sessionId}}\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1616,
+        112
+      ],
+      "id": "4e5f5e2a-5df9-496d-bba9-efa945e25daa",
+      "name": "ControlTokens"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT\n    COALESCE(sct.vc_session_id, '{{$node[\"Webhook\"].json.body.sessionId}}') as vc_session_id,\n    COALESCE(SUM(sct.\"tokensEntrada\"), 0) as \"tokensEntrada\",\n    COALESCE(SUM(sct.\"tokensSalida\"), 0) as \"tokensSalida\",\n    COALESCE(SUM(sct.\"tokensTotal\"), 0) as \"tokensTotal\"\nFROM (SELECT 1) as dummy\nLEFT JOIN \"SessionControlTokens\" sct \n    ON sct.vc_session_id = '{{$node[\"Webhook\"].json.body.sessionId}}'\nGROUP BY sct.vc_session_id",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -816,
+        144
+      ],
+      "id": "6bfee255-dfcc-4bc1-97c5-071d99333c3e",
+      "name": "Execute a SQL query",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "Z2mTqwzFo4gFozil",
+          "name": "Boki"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c51a6bd9-00f0-47a2-9a9b-f349ccadc0e5",
+              "leftValue": "={{ $json.tokensTotal <= $node[\"CompanyServices\"].json.i_max_conversation_tokens}}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -608,
+        144
+      ],
+      "id": "e3d1c113-45fa-4929-868a-a750c9da9fec",
+      "name": "If1"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO \"MessageHistory\" (\n    vc_session_id,\n    vc_user_name,\n    vc_message\n) VALUES (\n    '{{$node[\"Webhook\"].json.body.sessionId}}',\n    'System',\n    '{{ $node[\"GenradorMessage\"].json.output.message }}'\n)",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1392,
+        112
+      ],
+      "id": "de26a08f-547c-4614-8391-91502547f6ae",
+      "name": "MessageSystem",
+      "credentials": {
+        "postgres": {
+          "id": "Z2mTqwzFo4gFozil",
+          "name": "Boki"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "5f2c4d87-7812-4594-96f2-f7f2803840d3",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -1456,
+        160
+      ],
+      "id": "4917d9ca-4a38-4768-b1d2-a88a9b4b9353",
+      "name": "Webhook",
+      "webhookId": "5f2c4d87-7812-4594-96f2-f7f2803840d3"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        1152,
+        112
+      ],
+      "id": "9b62a69d-1f02-48e6-8079-8ca4c115a786",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\n  \"output\": {\n    \"message\": \"Se te acabaron los Tokens de hoy pa\"\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        -352,
+        304
+      ],
+      "id": "98b8a77a-0c0c-4e6e-a0e0-f3ff586781a2",
+      "name": "Respond to Webhook2"
+    },
+    {
+      "parameters": {
+        "text": "={{ $json.output }}",
+        "attributes": {
+          "attributes": [
+            {
+              "name": "Intencion",
+              "description": "Intencion",
+              "required": true
+            },
+            {
+              "name": "idIntencion",
+              "description": "idIntencion"
+            }
+          ]
+        },
+        "options": {
+          "systemPromptTemplate": "Debes dividir el texto suministrado en los campos mencionados, luego debes organizar la informacion de manera amigable con una interfaz de chat."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.informationExtractor",
+      "typeVersion": 1.2,
+      "position": [
+        -1456,
+        -288
+      ],
+      "id": "08f0368e-8218-4ad1-b47a-fd012b5aeab6",
+      "name": "Parcer",
+      "disabled": true
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "ContextAgent",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "GenradorMessage",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ContextAgent": {
+      "main": [
+        [
+          {
+            "node": "Execute a SQL query5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Postgres Chat Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "ContextAgent",
+            "type": "ai_memory",
+            "index": 0
+          },
+          {
+            "node": "GenradorMessage",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute a SQL query4": {
+      "main": [
+        [
+          {
+            "node": "ContextAgent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute a SQL query5": {
+      "main": [
+        [
+          {
+            "node": "Execute a SQL query1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CompanyServices": {
+      "main": [
+        [
+          {
+            "node": "Execute a SQL query",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute a SQL query1": {
+      "main": [
+        [
+          {
+            "node": "GenradorMessage",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "GenradorMessage",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GenradorMessage": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser1": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "ContextAgent",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "CompanyServices",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute a SQL query": {
+      "main": [
+        [
+          {
+            "node": "If1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If1": {
+      "main": [
+        [
+          {
+            "node": "Execute a SQL query4",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond to Webhook2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MessageSystem": {
+      "main": [
+        [
+          {
+            "node": "ControlTokens",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Respond to Webhook": {
+      "main": [
+        [
+          {
+            "node": "MessageSystem",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "da956095-4aeb-4b63-8467-474351aefc59",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "ff148f87cd53b8242e1fa88964c443b9837ba3a973eb946b9a0d19a356173028"
+  },
+  "id": "SQJ5iplaCmzqp1BT",
+  "tags": []
+}

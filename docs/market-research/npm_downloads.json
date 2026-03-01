@@ -1,0 +1,59 @@
+{
+  "botpress": {
+    "downloads": 3916,
+    "start": "2026-01-30",
+    "end": "2026-02-28",
+    "package": "botpress"
+  },
+  "@botpress/sdk": {
+    "downloads": 40151,
+    "start": "2026-01-30",
+    "end": "2026-02-28",
+    "package": "@botpress/sdk"
+  },
+  "whatsapp-web.js": {
+    "downloads": 240236,
+    "start": "2026-01-30",
+    "end": "2026-02-28",
+    "package": "whatsapp-web.js"
+  },
+  "venom-bot": {
+    "downloads": 17658,
+    "start": "2026-01-30",
+    "end": "2026-02-28",
+    "package": "venom-bot"
+  },
+  "@builderbot/bot": {
+    "downloads": 9432,
+    "start": "2026-01-30",
+    "end": "2026-02-28",
+    "package": "@builderbot/bot"
+  },
+  "node-telegram-bot-api": {
+    "downloads": 736025,
+    "start": "2026-01-30",
+    "end": "2026-02-28",
+    "package": "node-telegram-bot-api"
+  },
+  "telegraf": {
+    "downloads": 757908,
+    "start": "2026-01-30",
+    "end": "2026-02-28",
+    "package": "telegraf"
+  },
+  "discord.js": {
+    "downloads": 1685465,
+    "start": "2026-01-30",
+    "end": "2026-02-28",
+    "package": "discord.js"
+  },
+  "@grammyjs/core": {
+    "error": "HTTP Error 404: Not Found"
+  },
+  "baileys": {
+    "downloads": 115921,
+    "start": "2026-01-30",
+    "end": "2026-02-28",
+    "package": "baileys"
+  }
+}
